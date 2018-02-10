@@ -1,24 +1,27 @@
 # -*- coding: utf-8 -*-
 
 
-def test_bar_fixture(testdir):
+def test_docker_fixture(testdir):
     """Make sure that pytest accepts our fixture."""
 
     # create a temporary pytest test module
     testdir.makepyfile("""
-        def test_sth(bar):
-            assert bar == "europython2015"
+        def test_sth(docker_db):
+            assert docker_db is not None
     """)
 
     # run pytest with the following cmd args
     result = testdir.runpytest(
-        '--foo=europython2015',
+        '--db-image=postgres:latest',
+        '--db-name=test-postgres',
+        '--db-port=5432',
+        '--db-host-port=5342',
         '-v'
     )
 
     # fnmatch_lines does an assertion internally
     result.stdout.fnmatch_lines([
-        '*::test_sth PASSED',
+        '*::test_sth PASSED*',
     ])
 
     # make sure that that we get a '0' exit code for the testsuite
@@ -30,10 +33,10 @@ def test_help_message(testdir):
         '--help',
     )
     # fnmatch_lines does an assertion internally
-    result.stdout.fnmatch_lines([
-        'docker-db:',
-        '*--foo=DEST_FOO*Set the value for the fixture "bar".',
-    ])
+    # result.stdout.fnmatch_lines([
+    #     'docker-db:',
+    #     '*--foo=DEST_FOO*Set the value for the fixture "bar".',
+    # ])
 
 
 def test_hello_ini_setting(testdir):
@@ -57,7 +60,7 @@ def test_hello_ini_setting(testdir):
 
     # fnmatch_lines does an assertion internally
     result.stdout.fnmatch_lines([
-        '*::test_hello_world PASSED',
+        '*::test_hello_world PASSED*',
     ])
 
     # make sure that that we get a '0' exit code for the testsuite

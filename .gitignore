@@ -79,6 +79,7 @@ target/
 .idea/dictionaries
 .idea/*.iml
 .idea/*.xml
+.idea/codeStyles/**
 
 # Sensitive or high-churn files:
 .idea/**/dataSources/

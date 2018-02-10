@@ -44,7 +44,7 @@ setup(
     ],
     entry_points={
         'pytest11': [
-            'docker-db = pytest_docker_db',
+            'docker-db = pytest_docker_db.plugin',
         ],
     },
 )
