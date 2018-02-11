@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import pytest
+from _pytest.pytester import Testdir
 
 
 def test_docker_fixture(testdir):
@@ -28,6 +30,100 @@ def test_docker_fixture(testdir):
     assert result.ret == 0
 
 
+def test_postgres_options(testdir: Testdir):
+    """
+    Ensure that the container gets set up properly with
+    different options.
+    """
+    db_name = 'test-postgres'
+    testdir.makepyfile(
+        """
+        def test_container(docker_db, _docker):
+            inspect = _docker.inspect_container(docker_db['Id'])
+            ports = inspect['NetworkSettings']['Ports']
+            assert f'/test-postgres' == inspect.get('Name')
+            assert 'postgres:latest' == inspect.get('Config')['Image']
+            assert '5432/tcp' in ports
+            assert '5432' == ports['5432/tcp'][0]['HostPort']
+            host_config = inspect['HostConfig']
+            assert '/home/kp/vol:/var/lib/postgresql/data:rw' == host_config['Binds'][0]
+        """
+    )
+
+    result = testdir.runpytest(
+        '--db-volume-args=/home/kp/vol:/var/lib/postgresql/data:rw',
+        '--db-image=postgres:latest',
+        f'--db-name={db_name}',
+        '--db-port=5432',
+        '--db-host-port=5432',
+        '--db-persist-container',
+        '-v'
+    )
+
+    assert 0 == result.ret
+
+    # manually kill the container because it is persisted
+    kill_res = testdir.run('docker', 'kill', db_name)
+    assert 0 == kill_res.ret
+    kill_res = testdir.run('docker', 'rm', db_name)
+    assert 0 == kill_res.ret
+
+
+def test_postgres_no_volume(testdir):
+    """
+    Ensure that the container is set up properly and does not have a volume.
+    """
+    db_name = 'test-postgres-no-vol'
+    testdir.makepyfile(
+        """
+        def test_container_no_vol(docker_db, _docker):
+            inspect = _docker.inspect_container(docker_db['Id'])
+            host_config = inspect['HostConfig']
+            assert host_config['Binds'] is None
+        """
+    )
+
+    result = testdir.runpytest(
+        '--db-image=postgres:latest',
+        f'--db-name={db_name}',
+        '--db-port=5432',
+        '--db-host-port=5432',
+        '-v'
+    )
+
+    assert 0 == result.ret
+
+    # this should return a 1 because the container shouldn't exist
+    kill_res = testdir.run('docker', 'kill', db_name)
+    assert 1 == kill_res.ret
+    kill_res = testdir.run('docker', 'rm', db_name)
+    assert 1 == kill_res.ret
+
+
+def test_mysql(testdir):
+    """
+    Test a MySQL container
+    """
+    db_name = 'test-mysql'
+    testdir.makepyfile(
+        """
+        def test_mysql(docker_db, _docker):
+            inspect = _docker.inspect_container(docker_db['Id'])
+            assert '/test-mysql' == inspect.get('Name')
+        """
+    )
+
+    result = testdir.runpytest(
+        '--db-image=mysql:latest',
+        f'--db-name={db_name}',
+        '--db-port=5432',
+        '--db-host-port=5432',
+        '-v'
+    )
+
+    assert 0 == result.ret
+
+@pytest.mark.skip
 def test_help_message(testdir):
     result = testdir.runpytest(
         '--help',
@@ -37,31 +133,3 @@ def test_help_message(testdir):
     #     'docker-db:',
     #     '*--foo=DEST_FOO*Set the value for the fixture "bar".',
     # ])
-
-
-def test_hello_ini_setting(testdir):
-    testdir.makeini("""
-        [pytest]
-        HELLO = world
-    """)
-
-    testdir.makepyfile("""
-        import pytest
-
-        @pytest.fixture
-        def hello(request):
-            return request.config.getini('HELLO')
-
-        def test_hello_world(hello):
-            assert hello == 'world'
-    """)
-
-    result = testdir.runpytest('-v')
-
-    # fnmatch_lines does an assertion internally
-    result.stdout.fnmatch_lines([
-        '*::test_hello_world PASSED*',
-    ])
-
-    # make sure that that we get a '0' exit code for the testsuite
-    assert result.ret == 0
