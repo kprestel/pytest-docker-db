@@ -227,3 +227,4 @@ pyvenv.cfg
 pip-selfcheck.json
 .idea/inspectionProfiles/
 /list/
+.idea/

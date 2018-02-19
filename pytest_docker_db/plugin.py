@@ -42,7 +42,9 @@ def pytest_addoption(parser: Parser):
     )
     parser.addini('db-image', db_image_help, type='args')
 
-    db_name_help = 'Specify the name of the image.'
+    db_name_help = ('Specify the name of the container. If this is not '
+                    'specified a random container name will be used with the '
+                    'prefix "docker-db"')
     group.addoption(
         '--db-name',
         action='store',

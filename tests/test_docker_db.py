@@ -86,8 +86,8 @@ def test_postgres_no_volume(testdir):
     result = testdir.runpytest(
         '--db-image=postgres:latest',
         f'--db-name={db_name}',
-        '--db-port=5432',
-        '--db-host-port=5432',
+        '--db-port=3306',
+        '--db-host-port=3306',
         '-v'
     )
 
@@ -123,11 +123,11 @@ def test_mysql(testdir):
 
     assert 0 == result.ret
 
-@pytest.mark.skip
-def test_help_message(testdir):
-    result = testdir.runpytest(
-        '--help',
-    )
+# @pytest.mark.skip
+# def test_help_message(testdir):
+#     result = testdir.runpytest(
+#         '--help',
+#     )
     # fnmatch_lines does an assertion internally
     # result.stdout.fnmatch_lines([
     #     'docker-db:',
