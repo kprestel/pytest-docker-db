@@ -5,73 +5,88 @@ from typing import List, Optional
 
 import pytest
 import docker
+from _pytest.config import Parser
 from docker import Client
 from docker.errors import APIError
 
 
-def pytest_addoption(parser):
-    group = parser.getgroup('docker-db')
+def pytest_addoption(parser: Parser):
+    group = parser.getgroup('docker-db', 'Arguments to configure the '
+                                         'pytest-docker-db plugin.')
 
-    group.addoption(
-        '--db-volume-name',
-        action='store',
-        default=None,
-        help=('Specify the name of the volume to use to store the data. '
-              'If this is not specified then no volume will be used.')
+    db_vol_args_help = (
+        'Provide the "-v" arguments that you would pass to the '
+        '"docker run" command if you were using the cli. If you need '
+        'multiple volumes mounted separate them with commas.\n'
+        'The basic syntax is /host/vol/path:/path/in/container:rw. '
+        'If using a named volume, the syntax would be '
+        'vol-name:/path/in/container:rw '
+        'For more information please visit the docker documentation: '
+        'https://docs.docker.com/storage/volumes/#start-a-container-with-a-volume'
     )
-
     group.addoption(
         '--db-volume-args',
         action='store',
         default=None,
-        help=('Provide the "-v" arguments that you would pass to the '
-              '"docker run" command if you were using the cli. If you need '
-              'multiple volumes mounted separate them with commas.\n'
-              'The basic syntax is /host/vol/path:/path/in/container:rw. '
-              'For more information please visit the docker documentation: '
-              'https://docs.docker.com/storage/volumes/#start-a-container-with-a-volume')
+        help=db_vol_args_help
     )
+    parser.addini('db-volume-args', db_vol_args_help, type='args')
 
+    db_image_help = ('Specify the name of the image to use as the DB. '
+                     'Must be in the form of "image_name":"tag".')
     group.addoption(
         '--db-image',
         action='store',
         default=None,
-        help=('Specify the name of the image to use as the DB. '
-              'Must be in the form of "image_name":"tag".')
+        help=db_image_help
     )
+    parser.addini('db-image', db_image_help, type='args')
 
+    db_name_help = 'Specify the name of the image.'
     group.addoption(
         '--db-name',
         action='store',
         default=None,
-        help='Specify the name of the image.'
+        help=db_name_help
     )
+    parser.addini('db-name', db_name_help, type='args')
 
+    db_host_port_help = (
+        'Specify the port that the db should be listening to on the host'
+        'machine.')
     group.addoption(
         '--db-host-port',
         action='store',
         default=None,
-        help=('Specify the port that the db should be listening to on the host'
-              'machine.')
+        help=db_host_port_help
     )
+    parser.addini('db-host-port', db_host_port_help, type='args')
+
+    db_port_help = (
+        'Specify the port that the db should be listening to in the '
+        'container. This should be the default port used by your '
+        'database.')
 
     group.addoption(
         '--db-port',
         action='store',
         default=None,
-        help=('Specify the port that the db should be listening to in the '
-              'container. This should be the default port used by your '
-              'database.')
+        help=db_port_help
     )
+    parser.addini('db-port', db_port_help, type='args')
 
+    db_persist_container_help = (
+        'If set, the container created will not be torn down '
+        'after the test suite has ran. By default any image created '
+        'will be torn down and removed after the test suite has '
+        'finished.')
     group.addoption(
         '--db-persist-container',
         action='store_true',
-        help=('If set, the container created will not be torn down '
-              'after the test suite has ran. By default any image created '
-              'will be torn down and removed after the test suite has '
-              'finished.')
+        help=db_persist_container_help
     )
+    parser.addini('db-persist-container', db_persist_container_help,
+                  type='bool')
 
 
 @pytest.fixture(scope='session')
@@ -86,10 +101,15 @@ def _docker():
 
 @pytest.fixture(scope='session')
 def docker_db(request, _docker: Client):
+    """
+    A fixture that creates returns a `Container` object that is running the
+    specified database instance.
+    """
     opts = _DockerDBOptions(request)
 
     container = None
 
+    # find the container
     for c in _docker.containers(all=True):
         for name in c['Names']:
             if opts.db_name in name:
@@ -130,23 +150,65 @@ def docker_db(request, _docker: Client):
     yield container
 
     if not opts.persist_container:
-        _docker.kill(container=container['Id'])
-        _docker.remove_container(container=container['Id'])
+        _kill_rm_container(container['Id'], _docker)
+
+
+def _kill_rm_container(container_id: str, _docker: Client) -> None:
+    """
+    Kills and removes the container.
+
+    .. note::
+
+        If there is an exception raised when killing or removing the container,
+        it will not be raised. It will be printed to stdout, so it is not
+        just swallowed.
+    """
+    try:
+        _docker.kill(container=container_id)
+    except APIError:
+        print(f'Unable to kill container with ID: {container_id}')
+
+    try:
+        _docker.remove_container(container=container_id)
+    except APIError:
+        print(f'Unable to remove container with ID: {container_id}')
 
 
 class _DockerDBOptions:
     """Holds docker_db options."""
 
     def __init__(self, request):
-        self._db_image = request.config.getoption('--db-image')
-        self._db_name = request.config.getoption('--db-name')
-        self._host_port = request.config.getoption('--db-host-port')
-        self._db_port = request.config.getoption('--db-port')
-        self.persist_container = request.config.getoption(
-            '--db-persist-container')
-        self._volume_args = request.config.getoption('--db-volume-args')
+        self._db_image = self._get_config_val('db-image', request)
+        self._db_name = self._get_config_val('db-name', request)
+        self._host_port = self._get_config_val('db-host-port', request)
+        self._db_port = self._get_config_val('db-port', request)
+        self.persist_container = self._get_config_val('db-persist-container',
+                                                      request)
+        self._volume_args = self._get_config_val('db-volume-args', request)
 
         self._validate()
+
+    def _get_config_val(self, key: str, request):
+        """
+        Gets the config value from the command line arg or the ini file.
+
+        .. note::
+
+            Preference is given to the command line arg, meaning if the
+            argument is set via the command line and the ini file, the command
+            line argument will be used.
+
+        :param key: the key to look up. Must not have the beginning dashes.
+        :param request: the pytest `request` object.
+        """
+        val = request.config.getoption(f'--{key}')
+        if val is not None:
+            return val
+
+        val = request.config.getini(key)
+
+        if val:
+            return val[0]
 
     def _validate(self):
         if self.db_image is None:
