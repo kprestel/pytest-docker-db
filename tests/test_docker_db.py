@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import pytest
 from _pytest.pytester import Testdir
 
 
@@ -46,7 +45,8 @@ def test_postgres_options(testdir: Testdir):
             assert '5432/tcp' in ports
             assert '5432' == ports['5432/tcp'][0]['HostPort']
             host_config = inspect['HostConfig']
-            assert '/home/kp/vol:/var/lib/postgresql/data:rw' == host_config['Binds'][0]
+            assert ('/home/kp/vol:/var/lib/postgresql/data:rw'
+            == host_config['Binds'][0])
         """
     )
 
