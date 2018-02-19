@@ -43,7 +43,7 @@ def test_postgres_options(testdir: Testdir):
             assert f'/test-postgres' == inspect.get('Name')
             assert 'postgres:latest' == inspect.get('Config')['Image']
             assert '5432/tcp' in ports
-            assert '5432' == ports['5432/tcp'][0]['HostPort']
+            assert '5434' == ports['5432/tcp'][0]['HostPort']
             host_config = inspect['HostConfig']
             assert ('/home/kp/vol:/var/lib/postgresql/data:rw'
             == host_config['Binds'][0])
@@ -55,7 +55,7 @@ def test_postgres_options(testdir: Testdir):
         '--db-image=postgres:latest',
         f'--db-name={db_name}',
         '--db-port=5432',
-        '--db-host-port=5432',
+        '--db-host-port=5434',
         '--db-persist-container',
         '-v'
     )
@@ -86,8 +86,8 @@ def test_postgres_no_volume(testdir):
     result = testdir.runpytest(
         '--db-image=postgres:latest',
         f'--db-name={db_name}',
-        '--db-port=3306',
-        '--db-host-port=3306',
+        '--db-port=5432',
+        '--db-host-port=5435',
         '-v'
     )
 
@@ -116,8 +116,8 @@ def test_mysql(testdir):
     result = testdir.runpytest(
         '--db-image=mysql:latest',
         f'--db-name={db_name}',
-        '--db-port=5432',
-        '--db-host-port=5432',
+        '--db-port=3306',
+        '--db-host-port=3308',
         '-v'
     )
 

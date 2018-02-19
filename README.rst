@@ -6,10 +6,6 @@ pytest-docker-db
     :target: https://travis-ci.org/kprestel/pytest-docker-db
     :alt: See Build Status on Travis CI
 
-.. image:: https://ci.appveyor.com/api/projects/status/github/kprestel/pytest-docker-db?branch=master
-    :target: https://ci.appveyor.com/project/kprestel/pytest-docker-db/branch/master
-    :alt: See Build Status on AppVeyor
-
 A plugin to use docker databases for pytests
 
 ----
