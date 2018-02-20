@@ -222,10 +222,6 @@ class _DockerDBOptions:
 
     @property
     def db_name(self):
-        return self._db_name
-
-    @db_name.getter
-    def db_name(self):
         if self._db_name is None:
             return f'docker-db-{str(uuid.uuid4())}'
         else:
@@ -237,10 +233,6 @@ class _DockerDBOptions:
 
     @property
     def host_port(self):
-        return self._host_port
-
-    @host_port.getter
-    def host_port(self):
         if self._host_port is None:
             return self._find_unused_port()
         else:
@@ -248,26 +240,14 @@ class _DockerDBOptions:
 
     @property
     def host_mount_path(self) -> Optional[List[str]]:
-        return self.host_mount_path
-
-    @host_mount_path.getter
-    def host_mount_path(self) -> Optional[List[str]]:
         return self._parse_volume_args(0)
 
     @property
-    def container_mount_path(self) -> Optional[List[str]]:
-        return self.container_mount_path
-
-    @container_mount_path.getter
     def container_mount_path(self) -> Optional[List[str]]:
         return self._parse_volume_args(1)
 
     @property
     def volume_permissions(self) -> Optional[List[str]]:
-        return self.volume_permissions
-
-    @volume_permissions.getter
-    def volume_permissions(self) -> List[str]:
         try:
             return self._parse_volume_args(2)
         except IndexError:
@@ -283,10 +263,6 @@ class _DockerDBOptions:
         return args
 
     @property
-    def volume_args(self) -> Optional[List[str]]:
-        return self.volume_args
-
-    @volume_args.getter
     def volume_args(self) -> Optional[List[str]]:
         if self._volume_args:
             if ',' in self._volume_args:

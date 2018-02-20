@@ -29,33 +29,90 @@ def test_docker_fixture(testdir):
     assert result.ret == 0
 
 
+def test_bad_container_name(testdir):
+    """
+    Test that given a bad image name, the test fails.
+    """
+    testdir.makepyfile(
+        """
+        def test_bad_container(docker_db):
+            assert docker_db is None
+        """
+    )
+
+    result = testdir.runpytest(
+        '--db-image=not-an-image:latest',
+        '--db-name=test-bad',
+        '--db-port=1010',
+        '--db-host-port=1011',
+        '-v'
+    )
+
+    result.stdout.fnmatch_lines([
+        '*Unable to pull image: not-an-image:latest*',
+    ])
+
+    assert result.ret == 1
+
+
+def test_no_image(testdir):
+    """
+    Test that given no image, pytest fails.
+    """
+    testdir.makepyfile(
+        """
+        def test_bad_container(docker_db):
+            assert docker_db is None
+        """
+    )
+
+    result = testdir.runpytest(
+        '--db-name=test-bad',
+        '--db-port=1010',
+        '--db-host-port=1011',
+        '-v'
+    )
+
+    result.stdout.fnmatch_lines([
+        '*Must specify an image to use as the database.*',
+    ])
+
+    assert result.ret == 1
+
+
+def _make_postgres_pyfile(testdir, host_port, container_name):
+    testdir.makepyfile(
+        """
+        def test_container(docker_db, _docker):
+            inspect = _docker.inspect_container(docker_db['Id'])
+            ports = inspect['NetworkSettings']['Ports']
+            assert f'/{container_name}' == inspect.get('Name')
+            assert 'postgres:latest' == inspect.get('Config')['Image']
+            assert '5432/tcp' in ports
+            assert '{host_port}' == ports['5432/tcp'][0]['HostPort']
+            host_config = inspect['HostConfig']
+            assert ('/home/kp/vol:/var/lib/postgresql/data:rw'
+            == host_config['Binds'][0])
+        """.format(host_port=host_port,
+                   container_name=container_name)
+    )
+
+
 def test_postgres_options(testdir: Testdir):
     """
     Ensure that the container gets set up properly with
     different options.
     """
     db_name = 'test-postgres'
-    testdir.makepyfile(
-        """
-        def test_container(docker_db, _docker):
-            inspect = _docker.inspect_container(docker_db['Id'])
-            ports = inspect['NetworkSettings']['Ports']
-            assert f'/test-postgres' == inspect.get('Name')
-            assert 'postgres:latest' == inspect.get('Config')['Image']
-            assert '5432/tcp' in ports
-            assert '5434' == ports['5432/tcp'][0]['HostPort']
-            host_config = inspect['HostConfig']
-            assert ('/home/kp/vol:/var/lib/postgresql/data:rw'
-            == host_config['Binds'][0])
-        """
-    )
+    host_port = '5434'
+    _make_postgres_pyfile(testdir, host_port=host_port, container_name=db_name)
 
     result = testdir.runpytest(
         '--db-volume-args=/home/kp/vol:/var/lib/postgresql/data:rw',
         '--db-image=postgres:latest',
         f'--db-name={db_name}',
         '--db-port=5432',
-        '--db-host-port=5434',
+        f'--db-host-port={host_port}',
         '--db-persist-container',
         '-v'
     )
@@ -68,6 +125,29 @@ def test_postgres_options(testdir: Testdir):
     kill_res = testdir.run('docker', 'rm', db_name)
     assert 0 == kill_res.ret
 
+
+def test_postgres_ini(testdir: Testdir):
+    """
+    Ensure that the container gets setup properly using the ini config
+    """
+    db_name = 'test-postgres-ini'
+    host_port = '5346'
+    _make_postgres_pyfile(testdir, host_port=host_port, container_name=db_name)
+
+    testdir.makeini(
+        """
+        [pytest]
+        db-volume-args=/home/kp/vol:/var/lib/postgresql/data:rw
+        db-image=postgres:latest
+        db-name={db_name}
+        db-port=5432
+        db-host-port={host_port}
+        """.format(db_name=db_name, host_port=host_port)
+    )
+
+    result = testdir.runpytest('-v')
+
+    assert 0 == result.ret
 
 def test_postgres_no_volume(testdir):
     """
@@ -128,8 +208,8 @@ def test_mysql(testdir):
 #     result = testdir.runpytest(
 #         '--help',
 #     )
-    # fnmatch_lines does an assertion internally
-    # result.stdout.fnmatch_lines([
-    #     'docker-db:',
-    #     '*--foo=DEST_FOO*Set the value for the fixture "bar".',
-    # ])
+# fnmatch_lines does an assertion internally
+# result.stdout.fnmatch_lines([
+#     'docker-db:',
+#     '*--foo=DEST_FOO*Set the value for the fixture "bar".',
+# ])

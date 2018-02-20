@@ -22,7 +22,8 @@ Features
 Requirements
 ------------
 
-* TODO
+* docker-py>=1.10.6
+* pytest>=3.3.2
 
 
 Installation
