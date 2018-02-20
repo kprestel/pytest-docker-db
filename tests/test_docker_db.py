@@ -149,6 +149,7 @@ def test_postgres_ini(testdir: Testdir):
 
     assert 0 == result.ret
 
+
 def test_postgres_no_volume(testdir):
     """
     Ensure that the container is set up properly and does not have a volume.
