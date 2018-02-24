@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from _pytest.pytester import Testdir
+from docker import Client
 
 
 def test_docker_fixture(testdir):
@@ -14,7 +15,7 @@ def test_docker_fixture(testdir):
     # run pytest with the following cmd args
     result = testdir.runpytest(
         '--db-image=postgres:latest',
-        '--db-name=test-postgres',
+        '--db-name=test-postgres-1',
         '--db-port=5432',
         '--db-host-port=5342',
         '-v'
@@ -80,7 +81,8 @@ def test_no_image(testdir):
     assert result.ret == 1
 
 
-def _make_postgres_pyfile(testdir, host_port, container_name):
+def _make_postgres_pyfile(testdir, host_port, container_name,
+                          volume='/home/kp/vol'):
     testdir.makepyfile(
         """
         def test_container(docker_db, _docker):
@@ -91,10 +93,11 @@ def _make_postgres_pyfile(testdir, host_port, container_name):
             assert '5432/tcp' in ports
             assert '{host_port}' == ports['5432/tcp'][0]['HostPort']
             host_config = inspect['HostConfig']
-            assert ('/home/kp/vol:/var/lib/postgresql/data:rw'
+            assert ('{volume}:/var/lib/postgresql/data:rw'
             == host_config['Binds'][0])
         """.format(host_port=host_port,
-                   container_name=container_name)
+                   container_name=container_name,
+                   volume=volume)
     )
 
 
@@ -103,7 +106,7 @@ def test_postgres_options(testdir: Testdir):
     Ensure that the container gets set up properly with
     different options.
     """
-    db_name = 'test-postgres'
+    db_name = 'test-postgres-2'
     host_port = '5434'
     _make_postgres_pyfile(testdir, host_port=host_port, container_name=db_name)
 
@@ -123,6 +126,32 @@ def test_postgres_options(testdir: Testdir):
     kill_res = testdir.run('docker', 'kill', db_name)
     assert 0 == kill_res.ret
     kill_res = testdir.run('docker', 'rm', db_name)
+    assert 0 == kill_res.ret
+
+
+def test_named_volume(testdir: Testdir, _docker: Client):
+    """
+    Ensure that the container gets set up properly with
+    different options.
+    """
+    db_name = 'test-postgres-3'
+    host_port = '5438'
+    vol_name = 'test-vol'
+    _make_postgres_pyfile(testdir, host_port=host_port, container_name=db_name,
+                          volume=vol_name)
+
+    result = testdir.runpytest(
+        f'--db-volume-args={vol_name}:/var/lib/postgresql/data:rw',
+        '--db-image=postgres:latest',
+        f'--db-name={db_name}',
+        '--db-port=5432',
+        f'--db-host-port={host_port}',
+        '-v'
+    )
+
+    assert 0 == result.ret
+
+    kill_res = testdir.run('docker', 'volume', 'rm', vol_name)
     assert 0 == kill_res.ret
 
 

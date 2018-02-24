@@ -8,7 +8,7 @@ import docker
 from _pytest.config import Parser
 from docker import Client
 from docker.errors import APIError
-
+import pytest_docker_db.util as utils
 
 def pytest_addoption(parser: Parser):
     group = parser.getgroup('docker-db', 'Arguments to configure the '
@@ -118,8 +118,9 @@ def docker_db(request, _docker: Client):
                 container = c
                 break
 
+    # create the container
     if container is None:
-        port = opts._host_port
+        port = opts.host_port
         try:
             _docker.pull(opts.db_image)
         except APIError as e:
@@ -132,14 +133,16 @@ def docker_db(request, _docker: Client):
         )
 
         if opts.volume_args:
-            host_config['binds'] = [opts.volume_args]
+            _create_volume(_docker, opts.host_mount_path)
+            host_config['binds'] = opts.volume_args
 
         container = _docker.create_container(
             image=opts.db_image,
             name=opts.db_name,
             ports=[opts.db_port],
             detach=True,
-            host_config=host_config
+            host_config=host_config,
+            volumes=opts.container_mount_path or None
         )
 
     try:
@@ -174,6 +177,30 @@ def _kill_rm_container(container_id: str, _docker: Client) -> None:
         _docker.remove_container(container=container_id)
     except APIError:
         print(f'Unable to remove container with ID: {container_id}')
+
+
+def _create_volume(_docker: Client, vols: List[str]) -> None:
+    """
+    Try to create a named volume.
+
+    If the volume is path, a named volume will not be created.
+    If there is already a volume with the given name, it will not be touched.
+
+    If the volume cannot be created, then the tests will fail quickly.
+    :param _docker: The docker client.
+    :param vols: A list of *host* volume paths.
+    """
+    if not vols:
+        return
+
+    for p in vols:
+        if not utils.is_pathname_valid(p):
+            vol = _docker.volumes.list(filters={'name': p})
+            if not vol:
+                try:
+                    _docker.create_volume(p)
+                except APIError:
+                    pytest.fail(f'Unable to create volume: {p}')
 
 
 class _DockerDBOptions:
@@ -268,7 +295,7 @@ class _DockerDBOptions:
             if ',' in self._volume_args:
                 return self._volume_args.split(',')
             else:
-                return self._volume_args
+                return [self._volume_args]
 
     @staticmethod
     def _find_unused_port():
