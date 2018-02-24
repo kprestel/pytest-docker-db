@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-from _pytest.pytester import Testdir
-from docker import Client
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from _pytest.pytester import Testdir
+    from docker import Client
 
 
 def test_docker_fixture(testdir):
@@ -101,7 +104,7 @@ def _make_postgres_pyfile(testdir, host_port, container_name,
     )
 
 
-def test_postgres_options(testdir: Testdir):
+def test_postgres_options(testdir: 'Testdir'):
     """
     Ensure that the container gets set up properly with
     different options.
@@ -129,7 +132,7 @@ def test_postgres_options(testdir: Testdir):
     assert 0 == kill_res.ret
 
 
-def test_named_volume(testdir: Testdir, _docker: Client):
+def test_named_volume(testdir: 'Testdir', _docker: 'Client'):
     """
     Ensure that the container gets set up properly with
     different options.
@@ -155,7 +158,7 @@ def test_named_volume(testdir: Testdir, _docker: Client):
     assert 0 == kill_res.ret
 
 
-def test_postgres_ini(testdir: Testdir):
+def test_postgres_ini(testdir: 'Testdir'):
     """
     Ensure that the container gets setup properly using the ini config
     """
@@ -232,6 +235,29 @@ def test_mysql(testdir):
     )
 
     assert 0 == result.ret
+
+
+def test_dockerfile(testdir):
+    """
+    Test using a custom Dockerfile.
+    """
+    db_name = 'test-dockerfile'
+    host_port = '5351'
+    vol_name = 'test-dockerfile-vol'
+    _make_postgres_pyfile(testdir, host_port=host_port, container_name=db_name,
+                          volume=vol_name)
+
+    result = testdir.runpytest(
+        '--db-docker-file=/home/kp/workspace/pytest-docker-db/test-docker',
+        f'--db-volume-args={vol_name}:/var/lib/postgresql/data:rw',
+        f'--db-name={db_name}',
+        '--db-port=5432',
+        f'--db-host-port={host_port}',
+        '-v'
+    )
+
+    assert result.ret == 0
+
 
 # @pytest.mark.skip
 # def test_help_message(testdir):

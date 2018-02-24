@@ -90,6 +90,18 @@ def pytest_addoption(parser: Parser):
     parser.addini('db-persist-container', db_persist_container_help,
                   type='bool')
 
+    db_docker_file_help = ('Specify the path to the directory containing the '
+                           'Dockerfile to use in the build. '
+                           'If a path is given as well as an image name, '
+                           'the Dockerfile will be used.')
+    group.addoption(
+        '--db-docker-file',
+        action='store',
+        default=None,
+        help=db_docker_file_help
+    )
+    parser.addini('db-docker-file', db_docker_file_help, type='args')
+
 
 @pytest.fixture(scope='session')
 def _docker():
@@ -120,15 +132,26 @@ def docker_db(request, _docker: Client):
 
     # create the container
     if container is None:
-        port = opts.host_port
-        try:
-            _docker.pull(opts.db_image)
-        except APIError as e:
-            pytest.fail(f'Unable to pull image: {opts.db_image}. \n{e}')
+        if opts.docker_file is not None:
+            img_name = f'{opts.db_name}'
+            try:
+                x = _docker.build(path=opts.docker_file, rm=True,
+                                   tag=opts.db_name, pull=False)
+                for y in x:
+                    print(y)
+            except APIError as e:
+                pytest.fail(f'Unable to build image at '
+                            f'path: {opts.docker_file}.\n{e}')
+            opts.db_image = img_name
+        else:
+            try:
+                _docker.pull(opts.db_image)
+            except APIError as e:
+                pytest.fail(f'Unable to pull image: {opts.db_image}. \n{e}')
 
         host_config = _docker.create_host_config(
             port_bindings={
-                opts.db_port: port
+                opts.db_port: opts.host_port
             }
         )
 
@@ -136,6 +159,7 @@ def docker_db(request, _docker: Client):
             _create_volume(_docker, opts.host_mount_path)
             host_config['binds'] = opts.volume_args
 
+        # noinspection PyUnboundLocalVariable
         container = _docker.create_container(
             image=opts.db_image,
             name=opts.db_name,
@@ -214,6 +238,7 @@ class _DockerDBOptions:
         self.persist_container = self._get_config_val('db-persist-container',
                                                       request)
         self._volume_args = self._get_config_val('db-volume-args', request)
+        self._docker_file = self._get_config_val('db-docker-file', request)
 
         self._validate()
 
@@ -240,12 +265,21 @@ class _DockerDBOptions:
             return val[0]
 
     def _validate(self):
-        if self.db_image is None:
-            pytest.fail('Must specify an image to use as the database.')
+        if self.db_image is None and self.docker_file is None:
+            pytest.fail('Must specify an image or a Dockerfile '
+                        'to use as the database.')
+
+    @property
+    def docker_file(self):
+        return self._docker_file
 
     @property
     def db_image(self):
         return self._db_image
+
+    @db_image.setter
+    def db_image(self, val):
+        self._db_name = val
 
     @property
     def db_name(self):
