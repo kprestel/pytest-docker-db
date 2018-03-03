@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -247,9 +248,19 @@ def test_dockerfile(testdir):
     vol_name = 'test-dockerfile-vol'
     _make_postgres_pyfile(testdir, host_port=host_port, container_name=db_name,
                           volume=vol_name, image_name=image_name)
+    docker_file = """
+    FROM postgres:latest
+    ENV POSTGRES_PASSWORD foo
+    """
+    docker_file_path = os.getcwd() + os.sep + 'test-docker'
+    os.mkdir(docker_file_path)
+    with open(docker_file_path + os.sep + 'Dockerfile', 'w') as f:
+        f.write(docker_file)
+
+    print(docker_file_path)
 
     result = testdir.runpytest(
-        '--db-docker-file=/home/kp/workspace/pytest-docker-db/test-docker',
+        f'--db-docker-file={docker_file_path}',
         f'--db-volume-args={vol_name}:/var/lib/postgresql/data:rw',
         f'--db-name={db_name}',
         '--db-port=5432',
