@@ -6,7 +6,7 @@ from typing import List, Optional
 import pytest
 import docker
 from _pytest.config import Parser
-from docker import Client
+from docker import DockerClient
 from docker.errors import APIError
 import pytest_docker_db.util as utils
 
@@ -114,7 +114,7 @@ def _docker():
 
 
 @pytest.fixture(scope='session')
-def docker_db(request, _docker: Client):
+def docker_db(request, _docker: DockerClient):
     """
     A fixture that creates returns a `Container` object that is running the
     specified database instance.
@@ -182,7 +182,7 @@ def docker_db(request, _docker: Client):
         _kill_rm_container(container['Id'], _docker)
 
 
-def _kill_rm_container(container_id: str, _docker: Client) -> None:
+def _kill_rm_container(container_id: str, _docker: DockerClient) -> None:
     """
     Kills and removes the container.
 
@@ -203,7 +203,7 @@ def _kill_rm_container(container_id: str, _docker: Client) -> None:
         print(f'Unable to remove container with ID: {container_id}')
 
 
-def _create_volume(_docker: Client, vols: List[str]) -> None:
+def _create_volume(_docker: DockerClient, vols: List[str]) -> None:
     """
     Try to create a named volume.
 

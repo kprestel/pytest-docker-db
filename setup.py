@@ -24,7 +24,7 @@ setup(
     keywords='pytest docker database',
     long_description=read('README.rst'),
     py_modules=['pytest_docker_db'],
-    install_requires=['pytest>=3.1.1', 'docker-py>=1.10.6'],
+    install_requires=['pytest>=3.1.1', 'docker>=3.1.0'],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Framework :: Pytest',
