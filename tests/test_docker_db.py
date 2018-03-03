@@ -77,22 +77,22 @@ def test_no_image(testdir):
         '-v'
     )
 
-    result.stdout.fnmatch_lines([
-        '*Must specify an image to use as the database.*',
-    ])
+    result.stdout.fnmatch_lines(['*Must specify an image or a Dockerfile '
+                                 'to use as the database.*',
+                                 ])
 
     assert result.ret == 1
 
 
 def _make_postgres_pyfile(testdir, host_port, container_name,
-                          volume='/home/kp/vol'):
+                          volume='/home/kp/vol', image_name='postgres:latest'):
     testdir.makepyfile(
         """
         def test_container(docker_db, _docker):
-            inspect = _docker.inspect_container(docker_db['Id'])
+            inspect = _docker.api.inspect_container(docker_db.id)
             ports = inspect['NetworkSettings']['Ports']
             assert f'/{container_name}' == inspect.get('Name')
-            assert 'postgres:latest' == inspect.get('Config')['Image']
+            assert f'{image_name}' == inspect.get('Config')['Image']
             assert '5432/tcp' in ports
             assert '{host_port}' == ports['5432/tcp'][0]['HostPort']
             host_config = inspect['HostConfig']
@@ -100,7 +100,7 @@ def _make_postgres_pyfile(testdir, host_port, container_name,
             == host_config['Binds'][0])
         """.format(host_port=host_port,
                    container_name=container_name,
-                   volume=volume)
+                   volume=volume, image_name=image_name)
     )
 
 
@@ -190,7 +190,7 @@ def test_postgres_no_volume(testdir):
     testdir.makepyfile(
         """
         def test_container_no_vol(docker_db, _docker):
-            inspect = _docker.inspect_container(docker_db['Id'])
+            inspect = _docker.api.inspect_container(docker_db.id)
             host_config = inspect['HostConfig']
             assert host_config['Binds'] is None
         """
@@ -221,7 +221,7 @@ def test_mysql(testdir):
     testdir.makepyfile(
         """
         def test_mysql(docker_db, _docker):
-            inspect = _docker.inspect_container(docker_db['Id'])
+            inspect = _docker.api.inspect_container(docker_db.id)
             assert '/test-mysql' == inspect.get('Name')
         """
     )
@@ -242,10 +242,11 @@ def test_dockerfile(testdir):
     Test using a custom Dockerfile.
     """
     db_name = 'test-dockerfile'
+    image_name = 'test-dockerfile'
     host_port = '5351'
     vol_name = 'test-dockerfile-vol'
     _make_postgres_pyfile(testdir, host_port=host_port, container_name=db_name,
-                          volume=vol_name)
+                          volume=vol_name, image_name=image_name)
 
     result = testdir.runpytest(
         '--db-docker-file=/home/kp/workspace/pytest-docker-db/test-docker',
@@ -257,7 +258,6 @@ def test_dockerfile(testdir):
     )
 
     assert result.ret == 0
-
 
 # @pytest.mark.skip
 # def test_help_message(testdir):

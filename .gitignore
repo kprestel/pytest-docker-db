@@ -225,3 +225,4 @@ pip-selfcheck.json
 /list/
 .idea/
 /.retox.json
+/.pytest_cache/

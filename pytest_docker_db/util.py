@@ -1,5 +1,5 @@
-import errno, os
-
+import errno
+import os
 import sys
 
 # Sadly, Python fails to provide the following magic number for us.
@@ -9,7 +9,7 @@ Windows-specific error code indicating an invalid pathname.
 
 See Also
 ----------
-https://msdn.microsoft.com/en-us/library/windows/desktop/ms681382%28v=vs.85%29.aspx
+https://msdn.microsoft.com/en-us/library/windows/desktop/ms681382%28v=vs.85%29.aspx # noqa
     Official listing of all such codes.
 '''
 
@@ -19,7 +19,7 @@ def is_pathname_valid(pathname: str) -> bool:
     `True` if the passed pathname is a valid pathname for the current OS;
     `False` otherwise.
     """
-    # taken from https://stackoverflow.com/questions/9532499/check-whether-a-path-is-valid-in-python-without-creating-a-file-at-the-paths-ta
+    # taken from https://stackoverflow.com/questions/9532499/check-whether-a-path-is-valid-in-python-without-creating-a-file-at-the-paths-ta # noqa
     # If this pathname is either not a string or is but is empty, this pathname
     # is invalid.
     try:

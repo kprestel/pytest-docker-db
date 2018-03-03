@@ -10,6 +10,7 @@ from docker import DockerClient
 from docker.errors import APIError
 import pytest_docker_db.util as utils
 
+
 def pytest_addoption(parser: Parser):
     group = parser.getgroup('docker-db', 'Arguments to configure the '
                                          'pytest-docker-db plugin.')
@@ -22,7 +23,7 @@ def pytest_addoption(parser: Parser):
         'If using a named volume, the syntax would be '
         'vol-name:/path/in/container:rw '
         'For more information please visit the docker documentation: '
-        'https://docs.docker.com/storage/volumes/#start-a-container-with-a-volume'
+        'https://docs.docker.com/storage/volumes/#start-a-container-with-a-volume' # noqa
     )
     group.addoption(
         '--db-volume-args',
@@ -124,32 +125,31 @@ def docker_db(request, _docker: DockerClient):
     container = None
 
     # find the container
-    for c in _docker.containers(all=True):
-        for name in c['Names']:
-            if opts.db_name in name:
-                container = c
-                break
+    for c in _docker.containers.list(all=True):
+        if opts.db_name in c.name:
+            container = c
+            break
 
     # create the container
     if container is None:
         if opts.docker_file is not None:
             img_name = f'{opts.db_name}'
             try:
-                x = _docker.build(path=opts.docker_file, rm=True,
-                                   tag=opts.db_name, pull=False)
-                for y in x:
-                    print(y)
+                _ = _docker.images.build(path=opts.docker_file,  # noqa: F841
+                                         rm=True,
+                                         tag=opts.db_name,
+                                         pull=False)
             except APIError as e:
                 pytest.fail(f'Unable to build image at '
                             f'path: {opts.docker_file}.\n{e}')
             opts.db_image = img_name
         else:
             try:
-                _docker.pull(opts.db_image)
+                _docker.images.pull(opts.db_image)
             except APIError as e:
                 pytest.fail(f'Unable to pull image: {opts.db_image}. \n{e}')
 
-        host_config = _docker.create_host_config(
+        host_config = _docker.api.create_host_config(
             port_bindings={
                 opts.db_port: opts.host_port
             }
@@ -159,27 +159,32 @@ def docker_db(request, _docker: DockerClient):
             _create_volume(_docker, opts.host_mount_path)
             host_config['binds'] = opts.volume_args
 
-        # noinspection PyUnboundLocalVariable
-        container = _docker.create_container(
-            image=opts.db_image,
-            name=opts.db_name,
-            ports=[opts.db_port],
-            detach=True,
-            host_config=host_config,
-            volumes=opts.container_mount_path or None
-        )
+        try:
+            # noinspection PyUnboundLocalVariable
+            container_id = _docker.api.create_container(
+                image=opts.db_image,
+                name=opts.db_name,
+                ports=[opts.db_port],
+                detach=True,
+                host_config=host_config,
+                volumes=opts.container_mount_path or None
+            )
+        except APIError as e:
+            pytest.fail(f'Unable to create container.\n{e}')
 
     try:
-        _docker.start(container=container['Id'])
+        # noinspection PyUnboundLocalVariable
+        container = _docker.containers.get(container_id['Id'])
+        container.start()
     except APIError as e:
-        # TODO: make this smart and kill a container that is already running on the port
+        # TODO: make this smart and kill a container that is already running on the port # noqa
         pytest.fail(f'Unable to start container with ID: {container["Id"]}. '
                     f'\n{e}')
 
     yield container
 
     if not opts.persist_container:
-        _kill_rm_container(container['Id'], _docker)
+        _kill_rm_container(container.id, _docker)
 
 
 def _kill_rm_container(container_id: str, _docker: DockerClient) -> None:
@@ -193,12 +198,12 @@ def _kill_rm_container(container_id: str, _docker: DockerClient) -> None:
         just swallowed.
     """
     try:
-        _docker.kill(container=container_id)
+        _docker.api.kill(container=container_id)
     except APIError:
         print(f'Unable to kill container with ID: {container_id}')
 
     try:
-        _docker.remove_container(container=container_id)
+        _docker.api.remove_container(container=container_id)
     except APIError:
         print(f'Unable to remove container with ID: {container_id}')
 
@@ -279,7 +284,7 @@ class _DockerDBOptions:
 
     @db_image.setter
     def db_image(self, val):
-        self._db_name = val
+        self._db_image = val
 
     @property
     def db_name(self):
