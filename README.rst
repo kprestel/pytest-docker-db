@@ -37,7 +37,11 @@ You can install "pytest-docker-db" via `pip`_ from `PyPI`_::
 Usage
 -----
 
-* TODO
+Plugin contains one fixture:
+     *docker_db* - it's session scoped and returns a `docker-py container` object. For almost all use cases
+        the user will not care about this object.
+
+
 
 Contributing
 ------------
@@ -67,3 +71,4 @@ If you encounter any problems, please `file an issue`_ along with a detailed des
 .. _`tox`: https://tox.readthedocs.io/en/latest/
 .. _`pip`: https://pypi.python.org/pypi/pip/
 .. _`PyPI`: https://pypi.python.org/pypi
+.. _`docker-py container`: http://docker-py.readthedocs.io/en/stable/containers.html
