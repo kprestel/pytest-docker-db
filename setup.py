@@ -13,7 +13,7 @@ def read(fname):
 
 setup(
     name='pytest-docker-db',
-    version='0.1.0a0',
+    version='0.1.1a1',
     author='Kyle Prestel',
     author_email='kprestel@gmail.com',
     maintainer='Kyle Prestel',
@@ -25,6 +25,7 @@ setup(
     long_description=read('README.rst'),
     py_modules=['pytest_docker_db'],
     install_requires=['pytest>=3.1.1', 'docker>=3.1.0'],
+    python_requires='>=3.6',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Framework :: Pytest',
