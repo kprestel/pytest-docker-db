@@ -1,7 +1,12 @@
 # -*- coding: utf-8 -*-
+import os
+import io
 import uuid
 import socket
-from typing import List, Optional
+from typing import (
+    List,
+    Optional,
+)
 
 import pytest
 import docker
@@ -23,7 +28,7 @@ def pytest_addoption(parser: Parser):
         'If using a named volume, the syntax would be '
         'vol-name:/path/in/container:rw '
         'For more information please visit the docker documentation: '
-        'https://docs.docker.com/storage/volumes/#start-a-container-with-a-volume' # noqa
+        'https://docs.docker.com/storage/volumes/#start-a-container-with-a-volume'  # noqa
     )
     group.addoption(
         '--db-volume-args',
@@ -46,6 +51,7 @@ def pytest_addoption(parser: Parser):
     db_name_help = ('Specify the name of the container. If this is not '
                     'specified a random container name will be used with the '
                     'prefix "docker-db"')
+
     group.addoption(
         '--db-name',
         action='store',
@@ -135,13 +141,15 @@ def docker_db(request, _docker: DockerClient):
         if opts.docker_file is not None:
             img_name = f'{opts.db_name}'
             try:
-                _ = _docker.images.build(path=opts.docker_file,  # noqa: F841
+                _ = _docker.images.build(path=os.getcwd(),  # noqa: F841
                                          rm=True,
                                          tag=opts.db_name,
-                                         pull=False)
+                                         pull=False,
+                                         dockerfile=opts.docker_file)
             except APIError as e:
                 pytest.fail(f'Unable to build image at '
-                            f'path: {opts.docker_file}.\n{e}')
+                            f'path: {os.getcwd() + os.sep + opts.docker_file}.'
+                            f'\n{e}')
             opts.db_image = img_name
         else:
             try:
@@ -160,21 +168,17 @@ def docker_db(request, _docker: DockerClient):
             host_config['binds'] = opts.volume_args
 
         try:
-            # noinspection PyUnboundLocalVariable
-            container_id = _docker.api.create_container(
+            container = _docker.containers.create(
                 image=opts.db_image,
                 name=opts.db_name,
-                ports=[opts.db_port],
+                ports={opts.db_port: opts.host_port},
                 detach=True,
-                host_config=host_config,
-                volumes=opts.container_mount_path or None
+                volumes=opts.volume_args or None
             )
         except APIError as e:
             pytest.fail(f'Unable to create container.\n{e}')
 
     try:
-        # noinspection PyUnboundLocalVariable
-        container = _docker.containers.get(container_id['Id'])
         container.start()
     except APIError as e:
         # TODO: make this smart and kill a container that is already running on the port # noqa
@@ -206,6 +210,17 @@ def _kill_rm_container(container_id: str, _docker: DockerClient) -> None:
         _docker.api.remove_container(container=container_id)
     except APIError:
         print(f'Unable to remove container with ID: {container_id}')
+
+
+def _handle_dockerfile(dockerfile) -> io.BytesIO:
+    if os.path.isdir(dockerfile):
+        dockerfile = os.path.join(dockerfile, 'Dockerfile')
+
+    try:
+        with open(dockerfile, 'rb') as f:
+            return io.BytesIO(f.read())
+    except OSError:
+        raise
 
 
 def _create_volume(_docker: DockerClient, vols: List[str]) -> None:
@@ -260,14 +275,18 @@ class _DockerDBOptions:
         :param key: the key to look up. Must not have the beginning dashes.
         :param request: the pytest `request` object.
         """
-        val = request.config.getoption(f'--{key}')
-        if val is not None:
-            return val
-
+        # have to check the ini file first due to the way bools work on the cli
         val = request.config.getini(key)
 
         if val:
-            return val[0]
+            if type(val) == bool:
+                return val
+            else:
+                return val[0]
+
+        val = request.config.getoption(f'--{key}')
+        if val is not None:
+            return val
 
     def _validate(self):
         if self.db_image is None and self.docker_file is None:

@@ -238,7 +238,7 @@ def test_mysql(testdir):
     assert 0 == result.ret
 
 
-def test_dockerfile(testdir):
+def test_dockerfile(testdir: 'Testdir'):
     """
     Test using a custom Dockerfile.
     """
@@ -252,15 +252,10 @@ def test_dockerfile(testdir):
     FROM postgres:latest
     ENV POSTGRES_PASSWORD foo
     """
-    docker_file_path = os.getcwd() + os.sep + 'test-docker'
-    os.mkdir(docker_file_path)
-    with open(docker_file_path + os.sep + 'Dockerfile', 'w') as f:
-        f.write(docker_file)
-
-    print(docker_file_path)
+    _ = testdir.makefile('', Dockerfile=docker_file)  # noqa: F841
 
     result = testdir.runpytest(
-        f'--db-docker-file={docker_file_path}',
+        f'--db-docker-file=Dockerfile',
         f'--db-volume-args={vol_name}:/var/lib/postgresql/data:rw',
         f'--db-name={db_name}',
         '--db-port=5432',
