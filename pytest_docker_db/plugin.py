@@ -105,12 +105,12 @@ def pytest_addoption(parser: 'Parser'):
                            'If a path is given as well as an image name, '
                            'the Dockerfile will be used.')
     group.addoption(
-        '--db-docker-file',
+        '--db-dockerfile',
         action='store',
         default=None,
         help=db_docker_file_help
     )
-    parser.addini('db-docker-file', db_docker_file_help, type='args')
+    parser.addini('db-dockerfile', db_docker_file_help, type='args')
 
 
 @pytest.fixture(scope='session')
@@ -215,17 +215,6 @@ def _kill_rm_container(container_id: str, _docker: 'DockerClient') -> None:
         print(f'Unable to remove container with ID: {container_id}')
 
 
-def _handle_dockerfile(dockerfile) -> io.BytesIO:
-    if os.path.isdir(dockerfile):
-        dockerfile = os.path.join(dockerfile, 'Dockerfile')
-
-    try:
-        with open(dockerfile, 'rb') as f:
-            return io.BytesIO(f.read())
-    except OSError:
-        raise
-
-
 def _create_volume(_docker: 'DockerClient', vols: List[str]) -> None:
     """
     Try to create a named volume.
@@ -261,7 +250,7 @@ class _DockerDBOptions:
         self.persist_container = self._get_config_val('db-persist-container',
                                                       request)
         self._volume_args = self._get_config_val('db-volume-args', request)
-        self._docker_file = self._get_config_val('db-docker-file', request)
+        self._docker_file = self._get_config_val('db-dockerfile', request)
 
         self._validate()
 

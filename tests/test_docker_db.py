@@ -255,7 +255,7 @@ def test_dockerfile(testdir: 'Testdir'):
     _ = testdir.makefile('', Dockerfile=docker_file)  # noqa: F841
 
     result = testdir.runpytest(
-        f'--db-docker-file=Dockerfile',
+        f'--db-dockerfile=Dockerfile',
         f'--db-volume-args={vol_name}:/var/lib/postgresql/data:rw',
         f'--db-name={db_name}',
         '--db-port=5432',
