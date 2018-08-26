@@ -6,17 +6,20 @@ import socket
 from typing import (
     List,
     Optional,
+    TYPE_CHECKING,
 )
 
 import pytest
 import docker
-from _pytest.config import Parser
-from docker import DockerClient
 from docker.errors import APIError
 import pytest_docker_db.util as utils
 
+if TYPE_CHECKING:
+    from _pytest.config.argparsing import Parser
+    from docker import DockerClient
 
-def pytest_addoption(parser: Parser):
+
+def pytest_addoption(parser: 'Parser'):
     group = parser.getgroup('docker-db', 'Arguments to configure the '
                                          'pytest-docker-db plugin.')
 
@@ -121,7 +124,7 @@ def _docker():
 
 
 @pytest.fixture(scope='session')
-def docker_db(request, _docker: DockerClient):
+def docker_db(request, _docker: 'DockerClient'):
     """
     A fixture that creates returns a `Container` object that is running the
     specified database instance.
@@ -191,7 +194,7 @@ def docker_db(request, _docker: DockerClient):
         _kill_rm_container(container.id, _docker)
 
 
-def _kill_rm_container(container_id: str, _docker: DockerClient) -> None:
+def _kill_rm_container(container_id: str, _docker: 'DockerClient') -> None:
     """
     Kills and removes the container.
 
@@ -223,7 +226,7 @@ def _handle_dockerfile(dockerfile) -> io.BytesIO:
         raise
 
 
-def _create_volume(_docker: DockerClient, vols: List[str]) -> None:
+def _create_volume(_docker: 'DockerClient', vols: List[str]) -> None:
     """
     Try to create a named volume.
 
