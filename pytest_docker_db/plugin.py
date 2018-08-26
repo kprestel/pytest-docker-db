@@ -3,11 +3,7 @@ import os
 import io
 import uuid
 import socket
-from typing import (
-    List,
-    Optional,
-    TYPE_CHECKING,
-)
+from typing import List, Optional, TYPE_CHECKING
 
 import pytest
 import docker
@@ -19,101 +15,83 @@ if TYPE_CHECKING:
     from docker import DockerClient
 
 
-def pytest_addoption(parser: 'Parser'):
-    group = parser.getgroup('docker-db', 'Arguments to configure the '
-                                         'pytest-docker-db plugin.')
+def pytest_addoption(parser: "Parser"):
+    group = parser.getgroup(
+        "docker-db", "Arguments to configure the " "pytest-docker-db plugin."
+    )
 
     db_vol_args_help = (
         'Provide the "-v" arguments that you would pass to the '
         '"docker run" command if you were using the cli. If you need '
-        'multiple volumes mounted separate them with commas.\n'
-        'The basic syntax is /host/vol/path:/path/in/container:rw. '
-        'If using a named volume, the syntax would be '
-        'vol-name:/path/in/container:rw '
-        'For more information please visit the docker documentation: '
-        'https://docs.docker.com/storage/volumes/#start-a-container-with-a-volume'  # noqa
+        "multiple volumes mounted separate them with commas.\n"
+        "The basic syntax is /host/vol/path:/path/in/container:rw. "
+        "If using a named volume, the syntax would be "
+        "vol-name:/path/in/container:rw "
+        "For more information please visit the docker documentation: "
+        "https://docs.docker.com/storage/volumes/#start-a-container-with-a-volume"  # noqa
     )
     group.addoption(
-        '--db-volume-args',
-        action='store',
-        default=None,
-        help=db_vol_args_help
+        "--db-volume-args", action="store", default=None, help=db_vol_args_help
     )
-    parser.addini('db-volume-args', db_vol_args_help, type='args')
+    parser.addini("db-volume-args", db_vol_args_help, type="args")
 
-    db_image_help = ('Specify the name of the image to use as the DB. '
-                     'Must be in the form of "image_name":"tag".')
-    group.addoption(
-        '--db-image',
-        action='store',
-        default=None,
-        help=db_image_help
+    db_image_help = (
+        "Specify the name of the image to use as the DB. "
+        'Must be in the form of "image_name":"tag".'
     )
-    parser.addini('db-image', db_image_help, type='args')
+    group.addoption("--db-image", action="store", default=None, help=db_image_help)
+    parser.addini("db-image", db_image_help, type="args")
 
-    db_name_help = ('Specify the name of the container. If this is not '
-                    'specified a random container name will be used with the '
-                    'prefix "docker-db"')
-
-    group.addoption(
-        '--db-name',
-        action='store',
-        default=None,
-        help=db_name_help
+    db_name_help = (
+        "Specify the name of the container. If this is not "
+        "specified a random container name will be used with the "
+        'prefix "docker-db"'
     )
-    parser.addini('db-name', db_name_help, type='args')
+
+    group.addoption("--db-name", action="store", default=None, help=db_name_help)
+    parser.addini("db-name", db_name_help, type="args")
 
     db_host_port_help = (
-        'Specify the port that the db should be listening to on the host'
-        'machine.')
-    group.addoption(
-        '--db-host-port',
-        action='store',
-        default=None,
-        help=db_host_port_help
+        "Specify the port that the db should be listening to on the host" "machine."
     )
-    parser.addini('db-host-port', db_host_port_help, type='args')
+    group.addoption(
+        "--db-host-port", action="store", default=None, help=db_host_port_help
+    )
+    parser.addini("db-host-port", db_host_port_help, type="args")
 
     db_port_help = (
-        'Specify the port that the db should be listening to in the '
-        'container. This should be the default port used by your '
-        'database.')
-
-    group.addoption(
-        '--db-port',
-        action='store',
-        default=None,
-        help=db_port_help
+        "Specify the port that the db should be listening to in the "
+        "container. This should be the default port used by your "
+        "database."
     )
-    parser.addini('db-port', db_port_help, type='args')
+
+    group.addoption("--db-port", action="store", default=None, help=db_port_help)
+    parser.addini("db-port", db_port_help, type="args")
 
     db_persist_container_help = (
-        'If set, the container created will not be torn down '
-        'after the test suite has ran. By default any image created '
-        'will be torn down and removed after the test suite has '
-        'finished.')
-    group.addoption(
-        '--db-persist-container',
-        action='store_true',
-        help=db_persist_container_help
+        "If set, the container created will not be torn down "
+        "after the test suite has ran. By default any image created "
+        "will be torn down and removed after the test suite has "
+        "finished."
     )
-    parser.addini('db-persist-container', db_persist_container_help,
-                  type='bool')
-
-    db_docker_file_help = ('Specify the path to the directory containing the '
-                           'Dockerfile to use in the build. '
-                           'If a path is given as well as an image name, '
-                           'the Dockerfile will be used.')
     group.addoption(
-        '--db-dockerfile',
-        action='store',
-        default=None,
-        help=db_docker_file_help
+        "--db-persist-container", action="store_true", help=db_persist_container_help
     )
-    parser.addini('db-dockerfile', db_docker_file_help, type='args')
+    parser.addini("db-persist-container", db_persist_container_help, type="bool")
+
+    db_docker_file_help = (
+        "Specify the path to the directory containing the "
+        "Dockerfile to use in the build. "
+        "If a path is given as well as an image name, "
+        "the Dockerfile will be used."
+    )
+    group.addoption(
+        "--db-dockerfile", action="store", default=None, help=db_docker_file_help
+    )
+    parser.addini("db-dockerfile", db_docker_file_help, type="args")
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope="session")
 def _docker():
     """
     Returns the actual docker client.
@@ -123,8 +101,8 @@ def _docker():
     return docker.from_env()
 
 
-@pytest.fixture(scope='session')
-def docker_db(request, _docker: 'DockerClient'):
+@pytest.fixture(scope="session")
+def docker_db(request, _docker: "DockerClient"):
     """
     A fixture that creates returns a `Container` object that is running the
     specified database instance.
@@ -142,33 +120,35 @@ def docker_db(request, _docker: 'DockerClient'):
     # create the container
     if container is None:
         if opts.docker_file is not None:
-            img_name = f'{opts.db_name}'
+            img_name = f"{opts.db_name}"
             try:
-                _ = _docker.images.build(path=os.getcwd(),  # noqa: F841
-                                         rm=True,
-                                         tag=opts.db_name,
-                                         pull=False,
-                                         dockerfile=opts.docker_file)
+                _ = _docker.images.build(
+                    path=os.getcwd(),  # noqa: F841
+                    rm=True,
+                    tag=opts.db_name,
+                    pull=False,
+                    dockerfile=opts.docker_file,
+                )
             except APIError as e:
-                pytest.fail(f'Unable to build image at '
-                            f'path: {os.getcwd() + os.sep + opts.docker_file}.'
-                            f'\n{e}')
+                pytest.fail(
+                    f"Unable to build image at "
+                    f"path: {os.getcwd() + os.sep + opts.docker_file}."
+                    f"\n{e}"
+                )
             opts.db_image = img_name
         else:
             try:
                 _docker.images.pull(opts.db_image)
             except APIError as e:
-                pytest.fail(f'Unable to pull image: {opts.db_image}. \n{e}')
+                pytest.fail(f"Unable to pull image: {opts.db_image}. \n{e}")
 
         host_config = _docker.api.create_host_config(
-            port_bindings={
-                opts.db_port: opts.host_port
-            }
+            port_bindings={opts.db_port: opts.host_port}
         )
 
         if opts.volume_args:
             _create_volume(_docker, opts.host_mount_path)
-            host_config['binds'] = opts.volume_args
+            host_config["binds"] = opts.volume_args
 
         try:
             container = _docker.containers.create(
@@ -176,17 +156,16 @@ def docker_db(request, _docker: 'DockerClient'):
                 name=opts.db_name,
                 ports={opts.db_port: opts.host_port},
                 detach=True,
-                volumes=opts.volume_args or None
+                volumes=opts.volume_args or None,
             )
         except APIError as e:
-            pytest.fail(f'Unable to create container.\n{e}')
+            pytest.fail(f"Unable to create container.\n{e}")
 
     try:
         container.start()
     except APIError as e:
         # TODO: make this smart and kill a container that is already running on the port # noqa
-        pytest.fail(f'Unable to start container with ID: {container["Id"]}. '
-                    f'\n{e}')
+        pytest.fail(f'Unable to start container with ID: {container["Id"]}. ' f"\n{e}")
 
     yield container
 
@@ -194,7 +173,7 @@ def docker_db(request, _docker: 'DockerClient'):
         _kill_rm_container(container.id, _docker)
 
 
-def _kill_rm_container(container_id: str, _docker: 'DockerClient') -> None:
+def _kill_rm_container(container_id: str, _docker: "DockerClient") -> None:
     """
     Kills and removes the container.
 
@@ -207,15 +186,15 @@ def _kill_rm_container(container_id: str, _docker: 'DockerClient') -> None:
     try:
         _docker.api.kill(container=container_id)
     except APIError:
-        print(f'Unable to kill container with ID: {container_id}')
+        print(f"Unable to kill container with ID: {container_id}")
 
     try:
         _docker.api.remove_container(container=container_id)
     except APIError:
-        print(f'Unable to remove container with ID: {container_id}')
+        print(f"Unable to remove container with ID: {container_id}")
 
 
-def _create_volume(_docker: 'DockerClient', vols: List[str]) -> None:
+def _create_volume(_docker: "DockerClient", vols: List[str]) -> None:
     """
     Try to create a named volume.
 
@@ -231,26 +210,25 @@ def _create_volume(_docker: 'DockerClient', vols: List[str]) -> None:
 
     for p in vols:
         if not utils.is_pathname_valid(p):
-            vol = _docker.volumes.list(filters={'name': p})
+            vol = _docker.volumes.list(filters={"name": p})
             if not vol:
                 try:
                     _docker.create_volume(p)
                 except APIError:
-                    pytest.fail(f'Unable to create volume: {p}')
+                    pytest.fail(f"Unable to create volume: {p}")
 
 
 class _DockerDBOptions:
     """Holds docker_db options."""
 
     def __init__(self, request):
-        self._db_image = self._get_config_val('db-image', request)
-        self._db_name = self._get_config_val('db-name', request)
-        self._host_port = self._get_config_val('db-host-port', request)
-        self._db_port = self._get_config_val('db-port', request)
-        self.persist_container = self._get_config_val('db-persist-container',
-                                                      request)
-        self._volume_args = self._get_config_val('db-volume-args', request)
-        self._docker_file = self._get_config_val('db-dockerfile', request)
+        self._db_image = self._get_config_val("db-image", request)
+        self._db_name = self._get_config_val("db-name", request)
+        self._host_port = self._get_config_val("db-host-port", request)
+        self._db_port = self._get_config_val("db-port", request)
+        self.persist_container = self._get_config_val("db-persist-container", request)
+        self._volume_args = self._get_config_val("db-volume-args", request)
+        self._docker_file = self._get_config_val("db-dockerfile", request)
 
         self._validate()
 
@@ -276,14 +254,15 @@ class _DockerDBOptions:
             else:
                 return val[0]
 
-        val = request.config.getoption(f'--{key}')
+        val = request.config.getoption(f"--{key}")
         if val is not None:
             return val
 
     def _validate(self):
         if self.db_image is None and self.docker_file is None:
-            pytest.fail('Must specify an image or a Dockerfile '
-                        'to use as the database.')
+            pytest.fail(
+                "Must specify an image or a Dockerfile " "to use as the database."
+            )
 
     @property
     def docker_file(self):
@@ -300,7 +279,7 @@ class _DockerDBOptions:
     @property
     def db_name(self):
         if self._db_name is None:
-            return f'docker-db-{str(uuid.uuid4())}'
+            return f"docker-db-{str(uuid.uuid4())}"
         else:
             return self._db_name
 
@@ -328,7 +307,7 @@ class _DockerDBOptions:
         try:
             return self._parse_volume_args(2)
         except IndexError:
-            return ['rw']
+            return ["rw"]
 
     def _parse_volume_args(self, ix: int) -> Optional[List[str]]:
         if self.volume_args is None:
@@ -336,19 +315,19 @@ class _DockerDBOptions:
         args = []
         for p in self.volume_args:
             if p:
-                args.append(p.split(':')[ix])
+                args.append(p.split(":")[ix])
         return args
 
     @property
     def volume_args(self) -> Optional[List[str]]:
         if self._volume_args:
-            if ',' in self._volume_args:
-                return self._volume_args.split(',')
+            if "," in self._volume_args:
+                return self._volume_args.split(",")
             else:
                 return [self._volume_args]
 
     @staticmethod
     def _find_unused_port():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(('', 0))
+            s.bind(("", 0))
             return s.getsockname()[0]

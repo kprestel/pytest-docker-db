@@ -4,14 +4,14 @@ import sys
 
 # Sadly, Python fails to provide the following magic number for us.
 ERROR_INVALID_NAME = 123
-'''
+"""
 Windows-specific error code indicating an invalid pathname.
 
 See Also
 ----------
 https://msdn.microsoft.com/en-us/library/windows/desktop/ms681382%28v=vs.85%29.aspx # noqa
     Official listing of all such codes.
-'''
+"""
 
 
 def is_pathname_valid(pathname: str) -> bool:
@@ -35,8 +35,11 @@ def is_pathname_valid(pathname: str) -> bool:
         # Directory guaranteed to exist. If the current OS is Windows, this is
         # the drive to which Windows was installed (e.g., the "%HOMEDRIVE%"
         # environment variable); else, the typical root directory.
-        root_dirname = os.environ.get('HOMEDRIVE', 'C:') \
-            if sys.platform == 'win32' else os.path.sep
+        root_dirname = (
+            os.environ.get("HOMEDRIVE", "C:")
+            if sys.platform == "win32"
+            else os.path.sep
+        )
         assert os.path.isdir(root_dirname)  # ...Murphy and her ironclad Law
 
         # Append a path separator to this directory if needed.
@@ -66,7 +69,7 @@ def is_pathname_valid(pathname: str) -> bool:
             #   * Under most POSIX-compatible OSes, "ENAMETOOLONG".
             #   * Under some edge-case OSes (e.g., SunOS, *BSD), "ERANGE".
             except OSError as exc:
-                if hasattr(exc, 'winerror'):
+                if hasattr(exc, "winerror"):
                     if exc.winerror == ERROR_INVALID_NAME:
                         return False
                 elif exc.errno in {errno.ENAMETOOLONG, errno.ERANGE}:

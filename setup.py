@@ -13,7 +13,7 @@ def read(fname):
 
 setup(
     name='pytest-docker-db',
-    version='1.0.0d',
+    version='1.0.1',
     author='Kyle Prestel',
     author_email='kprestel@gmail.com',
     maintainer='Kyle Prestel',
