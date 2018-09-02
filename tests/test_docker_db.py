@@ -53,7 +53,9 @@ def test_bad_container_name(testdir):
         "-v",
     )
 
-    result.stdout.fnmatch_lines(["*Unable to pull image: not-an-image:latest*"])
+    result.stdout.fnmatch_lines(
+        ["*Unable to pull image: not-an-image:latest*"]
+    )
 
     assert result.ret == 1
 
