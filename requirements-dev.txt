@@ -35,12 +35,13 @@ pkg-resources==0.0.0
 pkginfo==1.4.2
 pluggy==0.7.1
 pre-commit==1.10.5
+psycopg2==2.7.5
 py==1.5.2
 pyfiglet==0.7.5
 Pygments==2.2.0
 pyparsing==2.2.0
 pytest==3.7.2
--e git+git@github.com:kprestel/pytest-docker-db.git@0c427db7f8dd0979592428ea1d5a0dd7a12db70d#egg=pytest_docker_db
+-e git+git@github.com:kprestel/pytest-docker-db.git@f58a6aa996e8a9f0a54c7953a92911ade6b46613#egg=pytest_docker_db
 pytz==2018.3
 PyYAML==3.13
 readme-renderer==17.2

@@ -1,9 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
-import io
-import uuid
-import socket
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 
 import pytest
 import docker
@@ -12,6 +9,8 @@ import pytest_docker_db.util as utils
 
 if TYPE_CHECKING:
     from _pytest.config.argparsing import Parser
+    from _pytest.config import Config, PytestPluginManager
+    from pytest_docker_db.docker_db import DockerDBSettings
     from docker import DockerClient
 
 
@@ -105,6 +104,24 @@ def pytest_addoption(parser: "Parser"):
     parser.addini("db-dockerfile", db_docker_file_help, type="args")
 
 
+def pytest_addhooks(pluginmanager: "PytestPluginManager"):
+    from pytest_docker_db import hooks
+
+    pluginmanager.add_hookspecs(hooks)
+
+
+@pytest.mark.trylast
+def pytest_configure(config: "Config"):
+    from pytest_docker_db.docker_db import (
+        DockerDBSettings,  # noqa: F811
+        DockerDB,  # noqa: F811
+    )
+
+    config.docker_db = DockerDBSettings(config)
+    db = DockerDB(config.docker_db)
+    config.pluginmanager.register(db, "db")
+
+
 @pytest.fixture(scope="session")
 def _docker():
     """
@@ -116,12 +133,13 @@ def _docker():
 
 
 @pytest.fixture(scope="session")
-def docker_db(request, _docker: "DockerClient"):
+def docker_db(pytestconfig, _docker):
     """
     A fixture that creates returns a `Container` object that is running the
     specified database instance.
     """
-    opts = _DockerDBOptions(request)
+    opts: "DockerDBSettings" = pytestconfig.docker_db
+    opts.validate()
 
     container = None
 
@@ -232,121 +250,3 @@ def _create_volume(_docker: "DockerClient", vols: List[str]) -> None:
                     _docker.create_volume(p)
                 except APIError:
                     pytest.fail(f"Unable to create volume: {p}")
-
-
-class _DockerDBOptions:
-    """Holds docker_db options."""
-
-    def __init__(self, request):
-        self._db_image = self._get_config_val("db-image", request)
-        self._db_name = self._get_config_val("db-name", request)
-        self._host_port = self._get_config_val("db-host-port", request)
-        self._db_port = self._get_config_val("db-port", request)
-        self.persist_container = self._get_config_val(
-            "db-persist-container", request
-        )
-        self._volume_args = self._get_config_val("db-volume-args", request)
-        self._docker_file = self._get_config_val("db-dockerfile", request)
-
-        self._validate()
-
-    def _get_config_val(self, key: str, request):
-        """
-        Gets the config value from the command line arg or the ini file.
-
-        .. note::
-
-            Preference is given to the command line arg, meaning if the
-            argument is set via the command line and the ini file, the command
-            line argument will be used.
-
-        :param key: the key to look up. Must not have the beginning dashes.
-        :param request: the pytest `request` object.
-        """
-        # have to check the ini file first due to the way bools work on the cli
-        val = request.config.getini(key)
-
-        if val:
-            if type(val) == bool:
-                return val
-            else:
-                return val[0]
-
-        val = request.config.getoption(f"--{key}")
-        if val is not None:
-            return val
-
-    def _validate(self):
-        if self.db_image is None and self.docker_file is None:
-            pytest.fail(
-                "Must specify an image or a Dockerfile "
-                "to use as the database."
-            )
-
-    @property
-    def docker_file(self):
-        return self._docker_file
-
-    @property
-    def db_image(self):
-        return self._db_image
-
-    @db_image.setter
-    def db_image(self, val):
-        self._db_image = val
-
-    @property
-    def db_name(self):
-        if self._db_name is None:
-            return f"docker-db-{str(uuid.uuid4())}"
-        else:
-            return self._db_name
-
-    @property
-    def db_port(self):
-        return self._db_port
-
-    @property
-    def host_port(self):
-        if self._host_port is None:
-            return self._find_unused_port()
-        else:
-            return self._host_port
-
-    @property
-    def host_mount_path(self) -> Optional[List[str]]:
-        return self._parse_volume_args(0)
-
-    @property
-    def container_mount_path(self) -> Optional[List[str]]:
-        return self._parse_volume_args(1)
-
-    @property
-    def volume_permissions(self) -> Optional[List[str]]:
-        try:
-            return self._parse_volume_args(2)
-        except IndexError:
-            return ["rw"]
-
-    def _parse_volume_args(self, ix: int) -> Optional[List[str]]:
-        if self.volume_args is None:
-            return
-        args = []
-        for p in self.volume_args:
-            if p:
-                args.append(p.split(":")[ix])
-        return args
-
-    @property
-    def volume_args(self) -> Optional[List[str]]:
-        if self._volume_args:
-            if "," in self._volume_args:
-                return self._volume_args.split(",")
-            else:
-                return [self._volume_args]
-
-    @staticmethod
-    def _find_unused_port():
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.bind(("", 0))
-            return s.getsockname()[0]
