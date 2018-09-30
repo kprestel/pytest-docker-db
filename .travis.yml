@@ -12,8 +12,8 @@ matrix:
     env: TOX_ENV=py36
   - python: 3.6
     env: TOX_ENV=flake8
-  - python: 3.7
-    env: TOX_ENV=py37
+#  - python: 3.7
+#    env: TOX_ENV=py37
 install:
 - pip install tox
 script:
@@ -23,6 +23,14 @@ before_cache:
 cache:
   directories:
   - "$HOME/.cache/pip"
+deploy:
+  provider: pypi
+  user: kprestel
+  password:
+    secure: 7i3DVOJBr1kGBy1+9UIEzWCBixNwXqPVh0SvuLu+SDkmNxlLeNeb7r9Rcs8DP/L3r9g7Oq8qeOrcky4BtHurBpYmOwIqkCXmJiZCKT3OxTE76oXTSsSWFjIz/E/Io0McwmYr6USyQJHcCD1eoIFaqIB2ChFYmNUmbtKGyTzBZqTGKIDUJjyiFux/k3rjrv9cd4RdVGqRkwPyg2mW8xgtLchRHeubhmm+m0962pqzKzzSYtDmX8BFmS09Oda5FIOd9wHvtolmEK1qBJxgAhGZr6/UB35wzVGshnek5U6cdUm/+pf5SLBHewdoXFTfmvuu8rUPgGVtxRQJA4T37sq4RjhAU7YN0CK/rdmGMeDhemKzjny2mWO8XvSoGwHZpUr7lEwoM+3wBUhBQzZGQEc+dRUvFvXZsGXLDi7qa3Ea4kCBdqPgHymVAP2X4RXBpN3tMajpO/YLnpVyQSndq1Idz6lx/sKcr1r5N+3LFlAuNdq9GTHZ2+TT9PUK8P7kMhR1G8iqCdRx+AxpZsLgvOMPGg8AsJxY1zTg97ytSrsRX2E7QShAM6WprsmJ7f7Yn0wdGsVMPhtjb9tu21/jQbBHGHjioT8yZX0SMpc5D1uEsjecVWfl/MC4sRXhkcjpKlHCWTAgwKIme7SDnWhlyP+cR/zsqxSCBcmfMBa6gOCiVS0=
+  distributions: "sdist bdist_wheel"
+  on:
+    tags: true
 env:
   global:
   - secure: FmGWt/wQr8NrBKaT6QpzN39LvePXVvKOsdaTZgHBfSY9IPqPd3yMCT+yaMWoo8Yjm3/d0Q4+3b9jiBdCWOduiJb9y8/G/7i7RtN/V6wTg+7Cc7AWMo9Z+tJuMlPBIcdl14wb/n0VbRH+VOMiFH85F0W/tDC98JOlJj/gfRv5YO8zl9wsjla3uZX2a/U1Ps9nAeeCbodWgtEYX5+xpjQ2COHC4GAbpPPaU15wkzdP5QIXLPhpbXQfQSXW/5KOQ5aEYCdlCGvJO4OejnVi3Uf+AdqMhcdkm0vgJkwud/fZUB59FKSkNxjDKu/GLL5dX38DiZ6RVdoGtiUXdtDGlQ1Rmca6oPeEfH0SNj4CgE1KjmThtzoZP9tvva5skjq17Lyf8bI8IhOnmPySovtGaK/r+acp0k9HWYdN7UWrYYu/clYQ0VLEoZsWO2xbnJHX1OX6nY6qP19uQ2Lq/Hvn2y4L/pq5iVbIAGMeiOe/+jqAt4ofWxisrd24GSd4yy54PQIc/O4Jzc1o/S6EuwL/gVzXL28rNOMgys5D3fz153Yub84rBEf3nVz+bB3KRHJN9DekN4RiOXNZdmt5RonMlgktsnx7XwOQ+0eAEw7cPBCnxTT3E1gEdSvi7cp+vjdqpeHiVPE1hmXEra8hpiwdGSLpTfiajS9PHNyEOgDvcBDlqEI=

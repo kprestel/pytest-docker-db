@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 import os
-import io
+import tarfile
 import uuid
 import socket
-from typing import List, Optional, TYPE_CHECKING
+from contextlib import contextmanager
+from pathlib import Path
+from typing import List, Optional, TYPE_CHECKING, Union
 
 import pytest
 import docker
@@ -27,8 +29,6 @@ def pytest_addoption(parser: "Parser"):
         "The basic syntax is /host/vol/path:/path/in/container:rw. "
         "If using a named volume, the syntax would be "
         "vol-name:/path/in/container:rw "
-        "For more information please visit the docker documentation: "
-        "https://docs.docker.com/storage/volumes/#start-a-container-with-a-volume"  # noqa
     )
     group.addoption(
         "--db-volume-args", action="store", default=None, help=db_vol_args_help
@@ -91,8 +91,8 @@ def pytest_addoption(parser: "Parser"):
     )
 
     db_docker_file_help = (
-        "Specify the path to the directory containing the "
-        "Dockerfile to use in the build. "
+        "Specify the name of the Dockerfile within the directory set as the "
+        "db-docker-context."
         "If a path is given as well as an image name, "
         "the Dockerfile will be used."
     )
@@ -103,6 +103,19 @@ def pytest_addoption(parser: "Parser"):
         help=db_docker_file_help,
     )
     parser.addini("db-dockerfile", db_docker_file_help, type="args")
+
+    db_docker_context_help = (
+        "The directory to use as the docker build context."
+    )
+
+    group.addoption(
+        "--db-docker-context",
+        action="store",
+        default=None,
+        help=db_docker_context_help,
+    )
+
+    parser.addini("db-docker-context", db_docker_context_help, type="args")
 
 
 @pytest.fixture(scope="session")
@@ -137,7 +150,7 @@ def docker_db(request, _docker: "DockerClient"):
             img_name = f"{opts.db_name}"
             try:
                 _ = _docker.images.build(  # noqa: F841
-                    path=os.getcwd(),
+                    path=opts.context,
                     rm=True,
                     tag=opts.db_name,
                     pull=False,
@@ -247,10 +260,11 @@ class _DockerDBOptions:
         )
         self._volume_args = self._get_config_val("db-volume-args", request)
         self._docker_file = self._get_config_val("db-dockerfile", request)
+        self._context = self._get_config_val("db-docker-context", request)
 
         self._validate()
 
-    def _get_config_val(self, key: str, request):
+    def _get_config_val(self, key: str, request) -> Union[bool, str]:
         """
         Gets the config value from the command line arg or the ini file.
 
@@ -282,6 +296,10 @@ class _DockerDBOptions:
                 "Must specify an image or a Dockerfile "
                 "to use as the database."
             )
+
+    @property
+    def context(self):
+        return self._context or os.getcwd()
 
     @property
     def docker_file(self):

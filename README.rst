@@ -82,9 +82,14 @@ Configuration
 
 * db-dockerfile
 
-    * Specify the path to the directory containing the Dockerfile to use in the build.
+    * Specify the name of the Dockerfile within the directory set as the :code:`db-build-context`
 
         * If a path is given as well as an image name, the Dockerfile will be used.
+
+* db-docker-context
+
+    * The directory to use as the docker build context.
+
 
 
 Usage
