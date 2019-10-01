@@ -42,7 +42,7 @@ pyparsing==2.2.0
 pytest==3.7.2
 -e git+git@github.com:kprestel/pytest-docker-db.git@0c427db7f8dd0979592428ea1d5a0dd7a12db70d#egg=pytest_docker_db
 pytz==2018.3
-PyYAML==3.13
+PyYAML==5.1
 readme-renderer==17.2
 requests==2.18.4
 requests-toolbelt==0.8.0
