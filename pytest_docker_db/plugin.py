@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
-import tarfile
-import uuid
 import socket
-from contextlib import contextmanager
-from pathlib import Path
+import uuid
 from typing import List, Optional, TYPE_CHECKING, Union
 
-import pytest
 import docker
+import pytest
 from docker.errors import APIError
+
 import pytest_docker_db.util as utils
 
 if TYPE_CHECKING:
@@ -367,4 +365,4 @@ class _DockerDBOptions:
     def _find_unused_port():
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("", 0))
-            return s.getsockname()[0]
+            return s.getsockname()[1]
