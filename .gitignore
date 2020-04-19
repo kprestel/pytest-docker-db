@@ -226,3 +226,4 @@ pip-selfcheck.json
 .idea/
 /.retox.json
 /.pytest_cache/
+/pip-wheel-metadata/

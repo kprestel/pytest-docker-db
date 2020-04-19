@@ -88,7 +88,7 @@ def _make_postgres_pyfile(
     testdir,
     host_port,
     container_name,
-    volume="/home/kp/vol",
+    volume="/tmp/docker",
     image_name="postgres:latest",
 ):
     testdir.makepyfile(
@@ -122,7 +122,7 @@ def test_postgres_options(testdir: "Testdir"):
     _make_postgres_pyfile(testdir, host_port=host_port, container_name=db_name)
 
     result = testdir.runpytest(
-        "--db-volume-args=/home/kp/vol:/var/lib/postgresql/data:rw",
+        "--db-volume-args=/tmp/docker:/var/lib/postgresql/data:rw",
         "--db-image=postgres:latest",
         f"--db-name={db_name}",
         "--db-port=5432",
@@ -178,7 +178,7 @@ def test_postgres_ini(testdir: "Testdir"):
     testdir.makeini(
         """
             [pytest]
-            db-volume-args=/home/kp/vol:/var/lib/postgresql/data:rw
+            db-volume-args=/tmp/docker:/var/lib/postgresql/data:rw
             db-image=postgres:latest
             db-name={db_name}
             db-port=5432
