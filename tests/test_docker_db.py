@@ -270,7 +270,7 @@ def test_dockerfile(testdir: "Testdir"):
     _ = testdir.makefile("", Dockerfile=docker_file)  # noqa: F841
 
     result = testdir.runpytest(
-        f"--db-dockerfile=Dockerfile",
+        "--db-dockerfile=Dockerfile",
         f"--db-volume-args={vol_name}:/var/lib/postgresql/data:rw",
         f"--db-name={db_name}",
         "--db-port=5432",
@@ -324,7 +324,7 @@ def test_docker_context(testdir: "Testdir"):
     # create_users.write_text(create_users_contents)
 
     result = testdir.runpytest(
-        f"--db-dockerfile=Dockerfile",
+        "--db-dockerfile=Dockerfile",
         f"--db-docker-context={str(docker_dir)}",
         f"--db-volume-args={vol_name}:/var/lib/postgresql/data:rw",
         f"--db-name={db_name}",

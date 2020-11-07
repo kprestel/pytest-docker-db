@@ -11,6 +11,18 @@ clean-build:
 	rm --force --recursive dist/
 	rm --force --recursive *.egg-info
 
+
+clean: clean-pyc clean-build
+
+build:
+	python setup.py sdist bdist_wheel
+	twine check dist/*
+
+upload: build
+	twine upload dist/*
+
+dist: clean test build upload
+
 isort:
 	sh -c "isort --skip-glob=.tox --recursive . "
 
