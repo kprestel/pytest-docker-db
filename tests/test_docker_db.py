@@ -55,10 +55,6 @@ def test_bad_container_name(testdir):
         "-v",
     )
 
-    result.stdout.fnmatch_lines(
-        ["*Unable to pull image: not-an-image:latest*"]
-    )
-
     assert result.ret == 1
 
 
@@ -112,22 +108,26 @@ def _make_postgres_pyfile(
     )
 
 
-def test_postgres_options(testdir: "Testdir"):
+def test_postgres_options(testdir: "Testdir", tmpdir):
     """
     Ensure that the container gets set up properly with
     different options.
     """
     db_name = "test-postgres-2"
     host_port = "5434"
-    _make_postgres_pyfile(testdir, host_port=host_port, container_name=db_name)
+    vol = str(tmpdir)
+    _make_postgres_pyfile(
+        testdir, host_port=host_port, container_name=db_name, volume=vol
+    )
 
     result = testdir.runpytest(
-        "--db-volume-args=/tmp/docker:/var/lib/postgresql/data:rw",
+        f"--db-volume-args={vol}:/var/lib/postgresql/data:rw",
         "--db-image=postgres:latest",
         f"--db-name={db_name}",
         "--db-port=5432",
         f"--db-host-port={host_port}",
         "--db-persist-container",
+        "--db-docker-env-vars=POSTGRES_PASSWORD='FOO',POSTGRES_USER=postgres",
         "-v",
     )
 

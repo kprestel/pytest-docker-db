@@ -90,6 +90,11 @@ Configuration
 
     * The directory to use as the docker build context.
 
+* db-docker-env-vars
+
+    * A comma separated list of environment variables to pass to `docker run`
+        * --db-docker-env-vars=FOO=BAR,PASSWORD=BAZ
+
 
 
 Usage
@@ -129,6 +134,11 @@ pytest CLI using a custom image:
 ::
 
     $ pytest --db-dockerfile=Dockerfile --db-name=test-postgres --db-port=5432 --db-host-port=5434
+
+pytest CLI using a custom image and passing environment variables to it:
+::
+
+    $ pytest --db-dockerfile=Dockerfile --db-name=test-postgres --db-port=5432 --db-host-port=5434 --db-docker-env-vars=POSTGRES_PASSWORD=FOO,POSTGRES_USER=BAR
 
 Contributing
 ------------

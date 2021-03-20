@@ -115,6 +115,24 @@ def pytest_addoption(parser: "Parser"):
 
     parser.addini("db-docker-context", db_docker_context_help, type="args")
 
+    db_docker_env_vars_help = (
+        "Comma separated list of environment variables "
+        "to pass to 'docker run'"
+    )
+
+    parser.addini(
+        "db-docker-env-vars", help=db_docker_env_vars_help, type="args"
+    )
+
+    group.addoption(
+        "--db-docker-env-vars",
+        action="store",
+        default=None,
+        help=db_docker_env_vars_help,
+    )
+
+    parser.addini("db-docker-context", db_docker_context_help, type="args")
+
 
 @pytest.fixture(scope="session")
 def _docker():
@@ -143,24 +161,9 @@ def docker_db(request, _docker: "DockerClient"):
             break
 
     # create the container
-    if container is None:
+    if container is None and opts.db_image is None:
         if opts.docker_file is not None:
-            img_name = f"{opts.db_name}"
-            try:
-                _ = _docker.images.build(  # noqa: F841
-                    path=opts.context,
-                    rm=True,
-                    tag=opts.db_name,
-                    pull=False,
-                    dockerfile=opts.docker_file,
-                )
-            except APIError as e:
-                pytest.fail(
-                    f"Unable to build image at "
-                    f"path: {os.getcwd() + os.sep + opts.docker_file}."
-                    f"\n{e}"
-                )
-            opts.db_image = img_name
+            opts.db_image = _build_image(_docker, opts)
         else:
             try:
                 _docker.images.pull(opts.db_image)
@@ -182,22 +185,61 @@ def docker_db(request, _docker: "DockerClient"):
                 ports={opts.db_port: opts.host_port},
                 detach=True,
                 volumes=opts.volume_args or None,
+                environment=opts.env_vars,
             )
         except APIError as e:
             pytest.fail(f"Unable to create container.\n{e}")
+    elif opts.db_image is not None:
+        try:
+            container = _docker.containers.run(
+                opts.db_image,
+                ports={opts.db_port: opts.host_port},
+                name=opts.db_name,
+                detach=True,
+                volumes=opts.volume_args or None,
+                environment=opts.env_vars,
+                auto_remove=not opts.persist_container,
+            )
+        except APIError as e:
+            pytest.fail(
+                f"Unable to start container: {opts.db_image}, Error: {e}"
+            )
 
-    try:
-        container.start()
-    except APIError as e:
-        # TODO: make this smart and kill a container that is already running on the port # noqa
-        pytest.fail(
-            f'Unable to start container with ID: {container["Id"]}. ' f"\n{e}"
-        )
+    if container is None:
+        pytest.fail("Could not create container")
+
+    if container.status != "running":
+        try:
+            container.start()
+        except APIError as e:
+            # TODO: make this smart and kill a container that is already running on the port # noqa
+            pytest.fail(
+                f"Unable to start container with ID: {container}. " f"\n{e}"
+            )
 
     yield container
 
     if not opts.persist_container:
         _kill_rm_container(container.id, _docker)
+
+
+def _build_image(_docker, opts):
+    img_name = f"{opts.db_name}"
+    try:
+        _ = _docker.images.build(  # noqa: F841
+            path=opts.context,
+            rm=True,
+            tag=opts.db_name,
+            pull=False,
+            dockerfile=opts.docker_file,
+        )
+    except APIError as e:
+        pytest.fail(
+            f"Unable to build image at "
+            f"path: {os.getcwd() + os.sep + opts.docker_file}."
+            f"\n{e}"
+        )
+    return img_name
 
 
 def _kill_rm_container(container_id: str, _docker: "DockerClient") -> None:
@@ -259,6 +301,7 @@ class _DockerDBOptions:
         self._volume_args = self._get_config_val("db-volume-args", request)
         self._docker_file = self._get_config_val("db-dockerfile", request)
         self._context = self._get_config_val("db-docker-context", request)
+        self._env_vars = self._get_config_val("db-docker-env-vars", request)
 
         self._validate()
 
@@ -360,6 +403,13 @@ class _DockerDBOptions:
                 return self._volume_args.split(",")
             else:
                 return [self._volume_args]
+
+    @property
+    def env_vars(self) -> Optional[List[str]]:
+        if self._env_vars:
+            return self._env_vars.split(",")
+        else:
+            return None
 
     @staticmethod
     def _find_unused_port():
