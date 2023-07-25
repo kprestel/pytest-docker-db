@@ -1,6 +1,6 @@
 attrs==17.4.0
 bleach==3.3.0
-certifi==2022.12.7
+certifi==2023.7.22
 chardet==3.0.4
 docker-py==1.10.6
 docker-pycreds==0.2.1
