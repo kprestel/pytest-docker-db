@@ -14,3 +14,29 @@ exclude = '''
   | dist
 )/
 '''
+
+[tool.poetry]
+name = "pytest-docker-db"
+version = "1.1.1"
+description = "A plugin to use docker databases for pytest tests"
+authors = ["Kyle Prestel <kprestel@gmail.com>"]
+license = "MIT"
+readme = "README.rst"
+packages = [{ include = "pytest_docker_db" }]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+docker = "^6.0.1"
+pytest = "^7.2.1"
+
+[tool.poetry.group.dev.dependencies]
+tox = "^4.2.8"
+flake8 = "^6.0.0"
+mypy = "^0.991"
+
+[tool.poetry.plugins.pytest11]
+docker-db = "pytest_docker_db.plugin"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

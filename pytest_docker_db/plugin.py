@@ -11,7 +11,7 @@ from docker.errors import APIError
 import pytest_docker_db.util as utils
 
 if TYPE_CHECKING:
-    from _pytest.config.argparsing import Parser
+    from _pytest.config import Parser
     from docker import DockerClient
 
 
@@ -322,7 +322,7 @@ class _DockerDBOptions:
         val = request.config.getini(key)
 
         if val:
-            if type(val) == bool:
+            if isinstance(val, bool):
                 return val
             else:
                 return val[0]
