@@ -21,7 +21,7 @@ version = "1.1.1"
 description = "A plugin to use docker databases for pytest tests"
 authors = ["Kyle Prestel <kprestel@gmail.com>"]
 license = "MIT"
-readme = "README.rst"
+readme = "README.md"
 packages = [{ include = "pytest_docker_db" }]
 
 [tool.poetry.dependencies]
