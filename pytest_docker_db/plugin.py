@@ -37,9 +37,7 @@ def pytest_addoption(parser: "Parser"):
         "Specify the name of the image to use as the DB. "
         'Must be in the form of "image_name":"tag".'
     )
-    group.addoption(
-        "--db-image", action="store", default=None, help=db_image_help
-    )
+    group.addoption("--db-image", action="store", default=None, help=db_image_help)
     parser.addini("db-image", db_image_help, type="args")
 
     db_name_help = (
@@ -48,14 +46,11 @@ def pytest_addoption(parser: "Parser"):
         'prefix "docker-db"'
     )
 
-    group.addoption(
-        "--db-name", action="store", default=None, help=db_name_help
-    )
+    group.addoption("--db-name", action="store", default=None, help=db_name_help)
     parser.addini("db-name", db_name_help, type="args")
 
     db_host_port_help = (
-        "Specify the port that the db should be listening to on the host"
-        "machine."
+        "Specify the port that the db should be listening to on the host" "machine."
     )
     group.addoption(
         "--db-host-port", action="store", default=None, help=db_host_port_help
@@ -68,9 +63,7 @@ def pytest_addoption(parser: "Parser"):
         "database."
     )
 
-    group.addoption(
-        "--db-port", action="store", default=None, help=db_port_help
-    )
+    group.addoption("--db-port", action="store", default=None, help=db_port_help)
     parser.addini("db-port", db_port_help, type="args")
 
     db_persist_container_help = (
@@ -84,9 +77,7 @@ def pytest_addoption(parser: "Parser"):
         action="store_true",
         help=db_persist_container_help,
     )
-    parser.addini(
-        "db-persist-container", db_persist_container_help, type="bool"
-    )
+    parser.addini("db-persist-container", db_persist_container_help, type="bool")
 
     db_docker_file_help = (
         "Specify the name of the Dockerfile within the directory set as the "
@@ -102,9 +93,7 @@ def pytest_addoption(parser: "Parser"):
     )
     parser.addini("db-dockerfile", db_docker_file_help, type="args")
 
-    db_docker_context_help = (
-        "The directory to use as the docker build context."
-    )
+    db_docker_context_help = "The directory to use as the docker build context."
 
     group.addoption(
         "--db-docker-context",
@@ -116,13 +105,10 @@ def pytest_addoption(parser: "Parser"):
     parser.addini("db-docker-context", db_docker_context_help, type="args")
 
     db_docker_env_vars_help = (
-        "Comma separated list of environment variables "
-        "to pass to 'docker run'"
+        "Comma separated list of environment variables " "to pass to 'docker run'"
     )
 
-    parser.addini(
-        "db-docker-env-vars", help=db_docker_env_vars_help, type="args"
-    )
+    parser.addini("db-docker-env-vars", help=db_docker_env_vars_help, type="args")
 
     group.addoption(
         "--db-docker-env-vars",
@@ -201,9 +187,7 @@ def docker_db(request, _docker: "DockerClient"):
                 auto_remove=not opts.persist_container,
             )
         except APIError as e:
-            pytest.fail(
-                f"Unable to start container: {opts.db_image}, Error: {e}"
-            )
+            pytest.fail(f"Unable to start container: {opts.db_image}, Error: {e}")
 
     if container is None:
         pytest.fail("Could not create container")
@@ -213,9 +197,7 @@ def docker_db(request, _docker: "DockerClient"):
             container.start()
         except APIError as e:
             # TODO: make this smart and kill a container that is already running on the port # noqa
-            pytest.fail(
-                f"Unable to start container with ID: {container}. " f"\n{e}"
-            )
+            pytest.fail(f"Unable to start container with ID: {container}. " f"\n{e}")
 
     yield container
 
@@ -295,9 +277,7 @@ class _DockerDBOptions:
         self._db_name = self._get_config_val("db-name", request)
         self._host_port = self._get_config_val("db-host-port", request)
         self._db_port = self._get_config_val("db-port", request)
-        self.persist_container = self._get_config_val(
-            "db-persist-container", request
-        )
+        self.persist_container = self._get_config_val("db-persist-container", request)
         self._volume_args = self._get_config_val("db-volume-args", request)
         self._docker_file = self._get_config_val("db-dockerfile", request)
         self._context = self._get_config_val("db-docker-context", request)
@@ -334,8 +314,7 @@ class _DockerDBOptions:
     def _validate(self):
         if self.db_image is None and self.docker_file is None:
             pytest.fail(
-                "Must specify an image or a Dockerfile "
-                "to use as the database."
+                "Must specify an image or a Dockerfile " "to use as the database."
             )
 
     @property
