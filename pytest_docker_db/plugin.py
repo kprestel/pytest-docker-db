@@ -2,7 +2,7 @@
 import os
 import socket
 import uuid
-from typing import List, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import docker
 import pytest
@@ -118,6 +118,40 @@ def pytest_addoption(parser: "Parser"):
     )
 
     parser.addini("db-docker-context", db_docker_context_help, type="args")
+
+    docker_compose_file_help = (
+        "Path to the Docker Compose file to use for setting up multiple containers."
+    )
+    group.addoption(
+        "--docker-compose-file",
+        action="store",
+        default=None,
+        help=docker_compose_file_help,
+    )
+    parser.addini("docker-compose-file", docker_compose_file_help, type="args")
+
+    docker_compose_project_name_help = "Specify the project name for Docker Compose."
+    group.addoption(
+        "--docker-compose-project-name",
+        action="store",
+        default=None,
+        help=docker_compose_project_name_help,
+    )
+    parser.addini(
+        "docker-compose-project-name", docker_compose_project_name_help, type="args"
+    )
+
+    docker_compose_services_help = (
+        "Specify which services to start (comma-separated). "
+        "If not specified, all services in the compose file will be started."
+    )
+    group.addoption(
+        "--docker-compose-services",
+        action="store",
+        default=None,
+        help=docker_compose_services_help,
+    )
+    parser.addini("docker-compose-services", docker_compose_services_help, type="args")
 
 
 @pytest.fixture(scope="session")
@@ -395,3 +429,158 @@ class _DockerDBOptions:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("", 0))
             return s.getsockname()[1]
+
+
+class _DockerComposeOptions:
+    """Holds docker-compose options."""
+
+    def __init__(self, request: pytest.FixtureRequest):
+        self._compose_file = self._get_config_val("docker-compose-file", request)
+        self._project_name = self._get_config_val(
+            "docker-compose-project-name", request
+        )
+        self._services = self._get_config_val("docker-compose-services", request)
+        self.persist_container = self._get_config_val("db-persist-container", request)
+        self._validate()
+
+    def _get_config_val(
+        self, key: str, request: pytest.FixtureRequest
+    ) -> bool | str | None:
+        val = request.config.getini(key)
+        if val:
+            if isinstance(val, bool):
+                return val
+            else:
+                return val[0]
+        val = request.config.getoption(f"--{key}")
+        if val is not None:
+            return val
+        return None
+
+    def _validate(self) -> None:
+        if self.compose_file is None:
+            pytest.fail(
+                "Must specify a Docker Compose file. Use --docker-compose-file option."
+            )
+        elif not os.path.isfile(self.compose_file):
+            pytest.fail(f"Docker Compose file not found: {self.compose_file}")
+
+    @property
+    def compose_file(self) -> str | None:
+        return self._compose_file
+
+    @property
+    def project_name(self) -> str:
+        if self._project_name is None:
+            return f"pytest-docker-compose-{str(uuid.uuid4())}"
+        else:
+            return self._project_name
+
+    @property
+    def services(self) -> list[str] | None:
+        if self._services:
+            return [s.strip() for s in self._services.split(",") if s.strip()]
+        else:
+            return None
+
+
+@pytest.fixture(scope="session")
+def docker_compose(request: pytest.FixtureRequest):
+    """
+    A fixture that brings up and tears down containers using Docker Compose.
+
+    This fixture validates that Docker Compose is installed before attempting
+    to bring up containers.
+    """
+    # Check if Docker Compose is installed
+    if not _check_docker_compose_installed():
+        pytest.fail(
+            "Docker Compose is not installed or not working on this system. Please install Docker Compose to use this fixture."
+        )
+
+    opts = _DockerComposeOptions(request)
+    compose_file = opts.compose_file
+    project_name = opts.project_name
+    services = opts.services
+    persist = opts.persist_container
+
+    def compose_cmd(base: str) -> list[str]:
+        # Check which Docker Compose command format is available
+        import shutil
+
+        if (
+            shutil.which("docker")
+            and subprocess.run(
+                ["docker", "compose", "--help"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ).returncode
+            == 0
+        ):
+            # Use new-style docker compose subcommand
+            cmd = ["docker", "compose", "-f", compose_file, "-p", project_name, base]
+        else:
+            # Fall back to old-style docker-compose command
+            cmd = ["docker-compose", "-f", compose_file, "-p", project_name, base]
+
+        if services:
+            cmd.extend(services)
+        return cmd
+
+    # Bring up the services
+    import subprocess
+
+    try:
+        up_cmd = compose_cmd("up") + ["-d"]
+        subprocess.run(up_cmd, check=True)
+    except Exception as e:
+        pytest.fail(f"Failed to bring up docker compose services: {e}")
+
+    yield  # No return value; user can interact with containers via docker SDK if needed
+
+    if not persist:
+        try:
+            down_cmd = compose_cmd("down")
+            subprocess.run(down_cmd, check=True)
+        except Exception as e:
+            print(f"Failed to tear down docker compose services: {e}")
+
+
+def _check_docker_compose_installed() -> bool:
+    """
+    Check if Docker Compose is installed on the system.
+
+    Returns:
+        bool: True if Docker Compose is installed, False otherwise
+    """
+    import shutil
+    import subprocess
+
+    # First check if docker compose is available as a plugin to docker CLI (new style)
+    try:
+        # Use shutil.which to check if docker is in PATH
+        if not shutil.which("docker"):
+            return False
+
+        result = subprocess.run(
+            ["docker", "compose", "version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        return result.returncode == 0
+    except Exception:
+        # If docker compose as plugin fails, check for docker-compose binary (old style)
+        try:
+            if shutil.which("docker-compose"):
+                result = subprocess.run(
+                    ["docker-compose", "--version"],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                )
+                return result.returncode == 0
+        except Exception:
+            pass
+
+    return False

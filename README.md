@@ -13,12 +13,14 @@ This is a pytest plugin that hooks into the host's :code:`docker` daemon to crea
 - Specify what port you want the container to be listening on the host machine and the container
 - Optionally persist the container between test sessions
 - Name the containers created
+- Support for multiple containers using Docker Compose
 
 ## Requirements
 
 - docker-py>=6
 - pytest>=7
 - docker
+- docker-compose (for Docker Compose support)
 
 ## Installation
 
@@ -81,16 +83,45 @@ pip install pytest-docker-db
 
 ## Usage
 
+### Single Container
+
 Plugin contains one fixture:
 _docker_db_ - it's a session scoped fixture that returns a `docker-py container` object.
 For almost all use cases the user will not care about this object.
 
 The recommended way to use this fixture is to create an :code:`autouse=True` fixture in your `conftest.py` file to automatically invoke the setup of the containers.
 
+### Multiple Containers
+
+Plugin also provides a _docker_compose_ fixture for managing multiple containers:
+
+- Session-scoped fixture that orchestrates multiple containers using Docker Compose
+- Does not return any value - just ensures containers are running
+- Can be combined with other fixtures to provide connection information to your tests
+
 ```python
     @pytest.fixture(scope='session', autouse=True)
     def my_docker_db(docker_db):
         pass
+```
+
+For Docker Compose, you can use the fixture like this:
+
+```python
+    @pytest.fixture(scope='session')
+    def test_environment(docker_compose):
+        # All services defined in your docker-compose.yml are now running
+        # You can provide connection information to your tests
+        return {
+            "postgres_url": "postgresql://user:password@localhost:5432/testdb",
+            "redis_url": "redis://localhost:6379/0"
+        }
+
+    def test_with_multiple_services(test_environment):
+        # Your test code here using the services
+        postgres_url = test_environment["postgres_url"]
+        redis_url = test_environment["redis_url"]
+        # ...
 ```
 
 Can be configured via the :code:`pytest` CLI or the :code:`pytest.ini` file.
@@ -122,6 +153,75 @@ pytest CLI using a custom image and passing environment variables to it
 
 ```bash
     pytest --db-dockerfile=Dockerfile --db-name=test-postgres --db-port=5432 --db-host-port=5434 --db-docker-env-vars=POSTGRES_PASSWORD=FOO,POSTGRES_USER=BAR
+```
+
+## Docker Compose Support
+
+You can use Docker Compose to manage multiple containers in your tests. This is particularly useful for complex test scenarios that require multiple services.
+
+### Configuration Options
+
+- docker-compose-file
+
+  - Path to the Docker Compose file to use for setting up multiple containers.
+
+- docker-compose-project-name
+
+  - Specify the project name for Docker Compose.
+  - If not provided, a unique name will be generated.
+
+- docker-compose-services
+
+  - Specify which services to start (comma-separated).
+  - If not specified, all services in the compose file will be started.
+
+- db-persist-container
+  - If set, containers created by Docker Compose will not be torn down after the test suite has run.
+
+### Example Usage
+
+Here's an example of how to use the Docker Compose fixture in your tests:
+
+```python
+@pytest.mark.usefixtures("docker_compose")
+def test_with_docker_compose():
+    # Your test code here
+    # All containers defined in your docker-compose.yml are now running
+    pass
+```
+
+Configure via pytest.ini:
+
+```ini
+[pytest]
+docker-compose-file=tests/docker-compose.yml
+docker-compose-project-name=my-test-project
+docker-compose-services=service1,service2
+```
+
+Or via pytest CLI:
+
+```bash
+pytest --docker-compose-file=tests/docker-compose.yml --docker-compose-project-name=my-test-project --docker-compose-services=service1,service2
+```
+
+Example docker-compose.yml:
+
+```yaml
+version: "3.8"
+services:
+  postgres:
+    image: postgres:latest
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=user
+      - POSTGRES_DB=testdb
+    ports:
+      - "5432:5432"
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
 ```
 
 ## Contributing

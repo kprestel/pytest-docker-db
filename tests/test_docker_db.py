@@ -183,9 +183,7 @@ def test_postgres_ini(testdir: "Testdir"):
             db-name={db_name}
             db-port=5432
             db-host-port={host_port}
-            """.format(
-            db_name=db_name, host_port=host_port
-        )
+            """.format(db_name=db_name, host_port=host_port)
     )
 
     result = testdir.runpytest("-v")
