@@ -1,4 +1,4 @@
-.PHONY: clean-pyc test clean-build
+.PHONY: clean-pyc test clean-build lint format isort lock install install-compose dev-install
 TEST_PATH=tests
 
 clean-pyc:
@@ -15,19 +15,33 @@ clean-build:
 clean: clean-pyc clean-build
 
 build:
-	python setup.py sdist bdist_wheel
-	twine check dist/*
+	poetry build
 
 upload: build
-	twine upload dist/*
+	poetry publish
 
 dist: clean test build upload
 
-isort:
-	sh -c "isort --skip-glob=.tox --recursive . "
+format:
+	poetry run black .
 
 lint:
-	flake8 --exclude=.tox
+	poetry run ruff check .
 
 test: clean-pyc
-	tox
+	poetry run pytest $(TEST_PATH)
+
+test-all:
+	poetry run tox
+
+install:
+	poetry install
+
+install-compose:
+	poetry install -E compose
+
+dev-install:
+	poetry install --with dev
+
+lock:
+	poetry lock
