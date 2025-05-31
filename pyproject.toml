@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{ include = "pytest_docker_db" }]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<4.0"
+python = ">=3.11,<4.0"
 docker = "*"
 pytest = "*"
 
