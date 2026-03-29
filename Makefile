@@ -1,9 +1,9 @@
-.PHONY: clean-pyc test clean-build lint format isort lock install install-compose dev-install
+.PHONY: clean-pyc test clean-build lint format lock install dev-install mypy type-check check
 TEST_PATH=tests
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm --force {} +
-	find . -name '*.pyo' -exec rm --force {} + 
+	find . -name '*.pyo' -exec rm --force {} +
 	find . -name '*~' -exec rm --force  {} +
 
 clean-build:
@@ -15,33 +15,35 @@ clean-build:
 clean: clean-pyc clean-build
 
 build:
-	poetry build
+	uv build
 
 upload: build
-	poetry publish
+	uv publish
 
 dist: clean test build upload
 
 format:
-	poetry run black .
+	uv run ruff format .
 
 lint:
-	poetry run ruff check .
+	uv run ruff check .
 
 test: clean-pyc
-	poetry run pytest $(TEST_PATH)
-
-test-all:
-	poetry run tox
+	uv run pytest $(TEST_PATH)
 
 install:
-	poetry install
-
-install-compose:
-	poetry install -E compose
+	uv sync
 
 dev-install:
-	poetry install --with dev
+	uv sync --group dev
 
 lock:
-	poetry lock
+	uv lock
+
+mypy:
+	uv run mypy pytest_docker_db
+
+type-check: mypy
+
+check: lint type-check
+

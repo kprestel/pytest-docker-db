@@ -4,11 +4,11 @@ A plugin to use docker databases for pytests
 
 ## What is this?
 
-This is a pytest plugin that hooks into the host's :code:`docker` daemon to create and teardown containers within the pytest life cycle.
+This is a pytest plugin that hooks into the host's `docker` daemon to create and teardown containers within the pytest life cycle.
 
 ## Features
 
-- Use custom :code:`Dockerfile`s or base images from `Dockerhub`
+- Use custom `Dockerfile`s or base images from `Dockerhub`
 - Use `volumes` to persist test data in between testing sessions
 - Specify what port you want the container to be listening on the host machine and the container
 - Optionally persist the container between test sessions
@@ -37,8 +37,8 @@ pip install pytest-docker-db
   - Provide the "-v" arguments that you would pass to the
     "docker run" command if you were using the cli. If you need
     multiple volumes mounted separate them with commas.
-  - The basic syntax is :code:`/host/vol/path:/path/in/container:rw`.
-    If using a named volume, the syntax would be :code:`vol-name:/path/in/container:rw`
+  - The basic syntax is `/host/vol/path:/path/in/container:rw`.
+    If using a named volume, the syntax would be `vol-name:/path/in/container:rw`
     'For more information please visit the `docker documentation`'
 
 - db-image
@@ -68,7 +68,7 @@ pip install pytest-docker-db
 
 - db-dockerfile
 
-  - Specify the name of the Dockerfile within the directory set as the :code:`db-build-context`
+  - Specify the name of the Dockerfile within the directory set as the `db-build-context`
 
     - If a path is given as well as an image name, the Dockerfile will be used.
 
@@ -89,7 +89,7 @@ Plugin contains one fixture:
 _docker_db_ - it's a session scoped fixture that returns a `docker-py container` object.
 For almost all use cases the user will not care about this object.
 
-The recommended way to use this fixture is to create an :code:`autouse=True` fixture in your `conftest.py` file to automatically invoke the setup of the containers.
+The recommended way to use this fixture is to create an `autouse=True` fixture in your `conftest.py` file to automatically invoke the setup of the containers.
 
 ### Multiple Containers
 
@@ -124,7 +124,7 @@ For Docker Compose, you can use the fixture like this:
         # ...
 ```
 
-Can be configured via the :code:`pytest` CLI or the :code:`pytest.ini` file.
+Can be configured via the `pytest` CLI or the `pytest.ini` file.
 
 pytest.ini:
 

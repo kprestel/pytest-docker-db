@@ -47,7 +47,7 @@ def is_container_running(service_name: str, project_name: str) -> bool:
 
 # @pytest.mark.usefixtures("docker_compose")
 def test_docker_compose(testdir: pytest.Testdir, request: pytest.FixtureRequest):
-    """Test that a user provided docker-compose.yml brings up the services in a pytest test and then after the test finishes checks that the containers are down"""
+    """Test that docker-compose.yml brings up services and tears them down."""
     testdir.makepyfile(
         """
         def test_compose(docker_compose):
@@ -74,6 +74,6 @@ def test_docker_compose(testdir: pytest.Testdir, request: pytest.FixtureRequest)
     service_list = ["test_service"]
 
     for service in service_list:
-        assert not is_container_running(
-            service, project_name
-        ), f"Service {service} is not running"
+        assert not is_container_running(service, project_name), (
+            f"Service {service} is not running"
+        )

@@ -10,23 +10,19 @@ jobs:
       fail-fast: false
       matrix:
         python-version: ["3.11", "3.12", "3.13"]
-        poetry-version: ["2.1.0"]
         os: [ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install Poetry
-        uses: abatilo/actions-poetry@v3
-        with:
-          poetry-version: ${{ matrix.poetry-version }}
       - name: Install dependencies
         run: make dev-install
       - name: Run linting
         run: make lint
       - name: Run formatting check
-        run: make format
+        run: uv run ruff format --check .
       - name: Run tests
         run: make test

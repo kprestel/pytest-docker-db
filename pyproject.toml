@@ -1,25 +1,41 @@
-[tool.poetry]
+[project]
 name = "pytest-docker-db"
 version = "1.1.0"
 description = "A plugin to use docker databases for pytest tests"
-authors = ["Kyle Prestel <kprestel@gmail.com>"]
-license = "MIT"
+authors = [{ name = "Kyle Prestel", email = "kprestel@gmail.com" }]
+license = { text = "MIT" }
 readme = "README.md"
-packages = [{ include = "pytest_docker_db" }]
+requires-python = ">=3.11"
+dependencies = [
+    "docker",
+    "pytest",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.11,<4.0"
-docker = "*"
-pytest = "*"
-
-[tool.poetry.group.dev.dependencies]
-tox = "^4.15.0"
-mypy = "^1.10.0"
-ruff = "*"
-
-[tool.poetry.plugins.pytest11]
+[project.entry-points.pytest11]
 docker-db = "pytest_docker_db.plugin"
 
+[dependency-groups]
+dev = [
+    "mypy>=1.10.0",
+    "ruff",
+    "pytest",
+]
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["pytest_docker_db"]
+warn_unused_ignores = true
+show_error_codes = true
+# Ignore missing imports for third-party packages without stubs (tweak if you add stubs)
+ignore_missing_imports = true
