@@ -5,7 +5,8 @@ import pytest
 from pytest_docker_db.plugin import (
     _DockerComposeOptions,
     _DockerDBOptions,
-    _get_config_val,
+    _get_config_bool,
+    _get_config_str,
 )
 
 
@@ -19,29 +20,39 @@ def _make_request(ini_values=None, cli_values=None):
     return request
 
 
-class TestGetConfigVal:
+class TestGetConfigStr:
     def test_returns_none_when_no_value(self):
         request = _make_request()
-        assert _get_config_val("db-image", request) is None
+        assert _get_config_str("db-image", request) is None
 
     def test_returns_cli_value(self):
         request = _make_request(cli_values={"--db-image": "postgres:latest"})
-        assert _get_config_val("db-image", request) == "postgres:latest"
+        assert _get_config_str("db-image", request) == "postgres:latest"
 
     def test_returns_ini_value(self):
         request = _make_request(ini_values={"db-image": ["postgres:15"]})
-        assert _get_config_val("db-image", request) == "postgres:15"
+        assert _get_config_str("db-image", request) == "postgres:15"
 
     def test_ini_takes_precedence_for_non_empty(self):
         request = _make_request(
             ini_values={"db-image": ["postgres:15"]},
             cli_values={"--db-image": "mysql:8"},
         )
-        assert _get_config_val("db-image", request) == "postgres:15"
+        assert _get_config_str("db-image", request) == "postgres:15"
+
+
+class TestGetConfigBool:
+    def test_returns_false_when_no_value(self):
+        request = _make_request()
+        assert _get_config_bool("db-persist-container", request) is False
 
     def test_returns_bool_from_ini(self):
         request = _make_request(ini_values={"db-persist-container": True})
-        assert _get_config_val("db-persist-container", request) is True
+        assert _get_config_bool("db-persist-container", request) is True
+
+    def test_returns_bool_from_cli(self):
+        request = _make_request(cli_values={"--db-persist-container": True})
+        assert _get_config_bool("db-persist-container", request) is True
 
 
 class TestDockerDBOptions:
