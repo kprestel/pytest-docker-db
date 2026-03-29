@@ -13,9 +13,7 @@ def compose_file(tmp_path: os.PathLike[str]) -> str:
     return dst
 
 
-@pytest.mark.skipif(
-    not shutil.which("docker"), reason="Docker is not installed"
-)
+@pytest.mark.skipif(not shutil.which("docker"), reason="Docker is not installed")
 def test_docker_compose_options_from_testdir(
     testdir: pytest.Testdir, compose_file: str
 ) -> None:
