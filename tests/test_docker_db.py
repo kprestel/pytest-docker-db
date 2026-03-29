@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-import os
-from pathlib import Path
-from shutil import copy2
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -74,7 +71,7 @@ def test_no_image(testdir):
     )
 
     result.stdout.fnmatch_lines(
-        ["*Must specify an image or a Dockerfile " "to use as the database.*"]
+        ["*Must specify an image or a Dockerfile to use as the database.*"]
     )
 
     assert result.ret == 1
@@ -183,9 +180,7 @@ def test_postgres_ini(testdir: "Testdir"):
             db-name={db_name}
             db-port=5432
             db-host-port={host_port}
-            """.format(
-            db_name=db_name, host_port=host_port
-        )
+            """.format(db_name=db_name, host_port=host_port)
     )
 
     result = testdir.runpytest("-v")
@@ -334,15 +329,3 @@ def test_docker_context(testdir: "Testdir"):
     )
 
     assert result.ret == 0
-
-
-# @pytest.mark.skip
-# def test_help_message(testdir):
-#     result = testdir.runpytest(
-#         '--help',
-#     )
-# fnmatch_lines does an assertion internally
-# result.stdout.fnmatch_lines([
-#     'docker-db:',
-#     '*--foo=DEST_FOO*Set the value for the fixture "bar".',
-# ])

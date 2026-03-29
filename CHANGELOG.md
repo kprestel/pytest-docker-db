@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Changed
 
 - Upgrade dependencies: docker-py 6.x.x, pytest 7.x.x
-- Drop support for python > 3.10
+- Drop support for python < 3.11
 
 ## [1.0.0] - 2018-08-26
 

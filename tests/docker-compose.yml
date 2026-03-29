@@ -1,0 +1,5 @@
+version: "3.8"
+services:
+  test_service:
+    image: alpine:latest
+    command: ["sleep", "60"]

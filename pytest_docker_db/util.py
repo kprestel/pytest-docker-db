@@ -9,7 +9,7 @@ Windows-specific error code indicating an invalid pathname.
 
 See Also
 ----------
-https://msdn.microsoft.com/en-us/library/windows/desktop/ms681382%28v=vs.85%29.aspx # noqa
+https://msdn.microsoft.com/en-us/library/windows/desktop/ms681382%28v=vs.85%29.aspx
     Official listing of all such codes.
 """
 
@@ -76,7 +76,7 @@ def is_pathname_valid(pathname: str) -> bool:
                     return False
     # If a "TypeError" exception was raised, it almost certainly has the
     # error message "embedded NUL character" indicating an invalid pathname.
-    except TypeError:
+    except (TypeError, ValueError):
         return False
     # If no exception was raised, all path components and hence this
     # pathname itself are valid.

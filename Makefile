@@ -1,9 +1,9 @@
-.PHONY: clean-pyc test clean-build
+.PHONY: clean-pyc test clean-build lint format lock install dev-install mypy type-check check
 TEST_PATH=tests
 
 clean-pyc:
 	find . -name '*.pyc' -exec rm --force {} +
-	find . -name '*.pyo' -exec rm --force {} + 
+	find . -name '*.pyo' -exec rm --force {} +
 	find . -name '*~' -exec rm --force  {} +
 
 clean-build:
@@ -15,19 +15,35 @@ clean-build:
 clean: clean-pyc clean-build
 
 build:
-	python setup.py sdist bdist_wheel
-	twine check dist/*
+	uv build
 
 upload: build
-	twine upload dist/*
+	uv publish
 
 dist: clean test build upload
 
-isort:
-	sh -c "isort --skip-glob=.tox --recursive . "
+format:
+	uv run ruff format .
 
 lint:
-	flake8 --exclude=.tox
+	uv run ruff check .
 
 test: clean-pyc
-	tox
+	uv run pytest $(TEST_PATH)
+
+install:
+	uv sync
+
+dev-install:
+	uv sync --group dev
+
+lock:
+	uv lock
+
+mypy:
+	uv run mypy pytest_docker_db
+
+type-check: mypy
+
+check: lint type-check
+
