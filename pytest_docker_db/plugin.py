@@ -192,13 +192,8 @@ def docker_db(
             except APIError as e:
                 pytest.fail(f"Unable to pull image: {opts.db_image}. \n{e}")
 
-        host_config = _docker.api.create_host_config(
-            port_bindings={opts.db_port: opts.host_port}
-        )
-
         if opts.volume_args:
             _create_volume(_docker, opts.host_mount_path)
-            host_config["binds"] = opts.volume_args
 
         try:
             container = _docker.containers.create(
