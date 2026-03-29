@@ -71,7 +71,7 @@ def test_no_image(testdir):
     )
 
     result.stdout.fnmatch_lines(
-        ["*Must specify an image or a Dockerfile " "to use as the database.*"]
+        ["*Must specify an image or a Dockerfile to use as the database.*"]
     )
 
     assert result.ret == 1
