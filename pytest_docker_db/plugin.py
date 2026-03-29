@@ -5,17 +5,19 @@ import shutil
 import socket
 import subprocess
 import uuid
+from collections.abc import Generator
+from typing import Any
 
 import docker
 import pytest
-from _pytest.config import Parser
 from docker import DockerClient
 from docker.errors import APIError
+from docker.models.containers import Container
 
 import pytest_docker_db.util as utils
 
 
-def pytest_addoption(parser: Parser):
+def pytest_addoption(parser: pytest.Parser) -> None:
     group = parser.getgroup(
         "docker-db", "Arguments to configure the pytest-docker-db plugin."
     )
@@ -153,7 +155,7 @@ def pytest_addoption(parser: Parser):
 
 
 @pytest.fixture(scope="session")
-def _docker():
+def _docker() -> DockerClient:
     """
     Returns the actual docker client.
 
@@ -163,7 +165,9 @@ def _docker():
 
 
 @pytest.fixture(scope="session")
-def docker_db(request, _docker: DockerClient):
+def docker_db(
+    request: pytest.FixtureRequest, _docker: DockerClient
+) -> Generator[Container, None, None]:
     """
     A fixture that creates returns a `Container` object that is running the
     specified database instance.
@@ -210,6 +214,7 @@ def docker_db(request, _docker: DockerClient):
 
     if container is None:
         pytest.fail("Could not create container")
+        return
 
     if container.status != "running":
         try:
@@ -224,7 +229,7 @@ def docker_db(request, _docker: DockerClient):
         _kill_rm_container(container.id, _docker)
 
 
-def _build_image(_docker, opts):
+def _build_image(_docker: DockerClient, opts: _DockerDBOptions) -> str:
     img_name = f"{opts.db_name}"
     try:
         _ = _docker.images.build(  # noqa: F841
@@ -237,7 +242,7 @@ def _build_image(_docker, opts):
     except APIError as e:
         pytest.fail(
             f"Unable to build image at "
-            f"path: {os.getcwd() + os.sep + opts.docker_file}."
+            f"path: {os.getcwd() + os.sep + (opts.docker_file or '')}."
             f"\n{e}"
         )
     return img_name
@@ -264,7 +269,7 @@ def _kill_rm_container(container_id: str, _docker: DockerClient) -> None:
         print(f"Unable to remove container with ID: {container_id}")
 
 
-def _create_volume(_docker: DockerClient, vols: list[str]) -> None:
+def _create_volume(_docker: DockerClient, vols: list[str] | None) -> None:
     """
     Try to create a named volume.
 
@@ -288,79 +293,94 @@ def _create_volume(_docker: DockerClient, vols: list[str]) -> None:
                     pytest.fail(f"Unable to create volume: {p}")
 
 
-def _get_config_val(key: str, request: pytest.FixtureRequest) -> bool | str | None:
+def _get_config_str(key: str, request: pytest.FixtureRequest) -> str | None:
     """
-    Gets the config value from the command line arg or the ini file.
+    Gets a string config value from the command line arg or the ini file.
 
-    Preference is given to the ini file for bools (due to how store_true works
-    on the CLI), and to the command line arg for everything else.
-
-    :param key: the key to look up. Must not have the beginning dashes.
-    :param request: the pytest `request` object.
+    Preference is given to the ini file, then the command line arg.
     """
-    val = request.config.getini(key)
+    val: Any = request.config.getini(key)
 
     if val:
-        if isinstance(val, bool):
+        if isinstance(val, list):
+            return str(val[0])
+        if isinstance(val, str):
             return val
-        else:
-            return val[0]
+        return None
 
-    val = request.config.getoption(f"--{key}")
-    if val is not None:
-        return val
+    opt: Any = request.config.getoption(f"--{key}")
+    if isinstance(opt, str):
+        return opt
 
     return None
+
+
+def _get_config_bool(key: str, request: pytest.FixtureRequest) -> bool:
+    """
+    Gets a boolean config value from the ini file or the command line arg.
+
+    Preference is given to the ini file for bools (due to how store_true works
+    on the CLI).
+    """
+    val: Any = request.config.getini(key)
+    if isinstance(val, bool) and val:
+        return val
+
+    val = request.config.getoption(f"--{key}")
+    if isinstance(val, bool):
+        return val
+
+    return False
 
 
 class _DockerDBOptions:
     """Holds docker_db options."""
 
-    def __init__(self, request: pytest.FixtureRequest):
-        self._db_image = _get_config_val("db-image", request)
-        self._db_name = _get_config_val("db-name", request)
-        self._host_port = _get_config_val("db-host-port", request)
-        self._db_port = _get_config_val("db-port", request)
-        self.persist_container = _get_config_val("db-persist-container", request)
-        self._volume_args = _get_config_val("db-volume-args", request)
-        self._docker_file = _get_config_val("db-dockerfile", request)
-        self._context = _get_config_val("db-docker-context", request)
-        self._env_vars = _get_config_val("db-docker-env-vars", request)
+    def __init__(self, request: pytest.FixtureRequest) -> None:
+        self._db_image = _get_config_str("db-image", request)
+        self._db_name = _get_config_str("db-name", request)
+        self._host_port: str | int | None = _get_config_str("db-host-port", request)
+        self._db_port = _get_config_str("db-port", request)
+        self.persist_container = _get_config_bool("db-persist-container", request)
+        self._volume_args = _get_config_str("db-volume-args", request)
+        self._docker_file = _get_config_str("db-dockerfile", request)
+        self._context = _get_config_str("db-docker-context", request)
+        self._env_vars = _get_config_str("db-docker-env-vars", request)
 
         self._validate()
 
-    def _validate(self):
+    def _validate(self) -> None:
         if self.db_image is None and self.docker_file is None:
             pytest.fail("Must specify an image or a Dockerfile to use as the database.")
 
     @property
-    def context(self):
+    def context(self) -> str:
         return self._context or os.getcwd()
 
     @property
-    def docker_file(self):
+    def docker_file(self) -> str | None:
         return self._docker_file
 
     @property
-    def db_image(self):
+    def db_image(self) -> str | None:
         return self._db_image
 
     @db_image.setter
-    def db_image(self, val):
+    def db_image(self, val: str | None) -> None:
         self._db_image = val
 
     @property
-    def db_name(self):
+    def db_name(self) -> str:
         if self._db_name is None:
             self._db_name = f"docker-db-{str(uuid.uuid4())}"
         return self._db_name
 
     @property
-    def db_port(self):
+    def db_port(self) -> str | None:
         return self._db_port
 
     @property
-    def host_port(self):
+    def host_port(self) -> str | int:
         if self._host_port is None:
             self._host_port = self._find_unused_port()
         return self._host_port
@@ -382,7 +402,7 @@ class _DockerDBOptions:
 
     def _parse_volume_args(self, ix: int) -> list[str] | None:
         if self.volume_args is None:
-            return
+            return None
         args = []
         for p in self.volume_args:
             if p:
@@ -396,6 +416,7 @@ class _DockerDBOptions:
                 return self._volume_args.split(",")
             else:
                 return [self._volume_args]
+        return None
 
     @property
     def env_vars(self) -> list[str] | None:
@@ -405,20 +426,21 @@ class _DockerDBOptions:
             return None
 
     @staticmethod
-    def _find_unused_port():
+    def _find_unused_port() -> int:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.bind(("", 0))
-            return s.getsockname()[1]
+            port: int = s.getsockname()[1]
+            return port
 
 
 class _DockerComposeOptions:
     """Holds docker-compose options."""
 
-    def __init__(self, request: pytest.FixtureRequest):
-        self._compose_file = _get_config_val("docker-compose-file", request)
-        self._project_name = _get_config_val("docker-compose-project-name", request)
-        self._services = _get_config_val("docker-compose-services", request)
-        self.persist_container = _get_config_val("db-persist-container", request)
+    def __init__(self, request: pytest.FixtureRequest) -> None:
+        self._compose_file = _get_config_str("docker-compose-file", request)
+        self._project_name = _get_config_str("docker-compose-project-name", request)
+        self._services = _get_config_str("docker-compose-services", request)
+        self.persist_container = _get_config_bool("db-persist-container", request)
         self._validate()
 
     def _validate(self) -> None:
@@ -448,7 +470,7 @@ class _DockerComposeOptions:
 
 
 @pytest.fixture(scope="session")
-def docker_compose(request: pytest.FixtureRequest):
+def docker_compose(request: pytest.FixtureRequest) -> Generator[None, None, None]:
     """
     A fixture that brings up and tears down containers using Docker Compose.
 
@@ -479,10 +501,16 @@ def docker_compose(request: pytest.FixtureRequest):
             == 0
         ):
             # Use new-style docker compose subcommand
-            cmd = ["docker", "compose", "-f", compose_file, "-p", project_name, base]
+            cmd = [
+                "docker", "compose", "-f", compose_file or "",
+                "-p", project_name, base,
+            ]
         else:
             # Fall back to old-style docker-compose command
-            cmd = ["docker-compose", "-f", compose_file, "-p", project_name, base]
+            cmd = [
+                "docker-compose", "-f", compose_file or "",
+                "-p", project_name, base,
+            ]
 
         if services:
             cmd.extend(services)
