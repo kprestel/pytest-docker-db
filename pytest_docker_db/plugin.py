@@ -502,14 +502,23 @@ def docker_compose(request: pytest.FixtureRequest) -> Generator[None, None, None
         ):
             # Use new-style docker compose subcommand
             cmd = [
-                "docker", "compose", "-f", compose_file or "",
-                "-p", project_name, base,
+                "docker",
+                "compose",
+                "-f",
+                compose_file or "",
+                "-p",
+                project_name,
+                base,
             ]
         else:
             # Fall back to old-style docker-compose command
             cmd = [
-                "docker-compose", "-f", compose_file or "",
-                "-p", project_name, base,
+                "docker-compose",
+                "-f",
+                compose_file or "",
+                "-p",
+                project_name,
+                base,
             ]
 
         if services:
